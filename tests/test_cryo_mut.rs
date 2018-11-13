@@ -45,17 +45,17 @@ fn write() {
 
 #[test]
 fn try_get_mut() {
-    with_cryo_mut(&mut 42, |cryo_mut| {
-        assert_eq!(cryo_mut.try_get_mut(), Some(&mut 42));
-    });
+    let mut cell = 42;
+    let mut cryo_mut = unsafe { CryoMut::new(&mut cell) };
+    assert_eq!(cryo_mut.try_get_mut(), Some(&mut 42));
 }
 
 #[test]
 fn try_get_mut_fail() {
-    with_cryo_mut(&mut 42, |cryo_mut| {
-        let _b = cryo_mut.read();
-        assert_eq!(cryo_mut.try_get_mut(), None);
-    });
+    let mut cell = 42;
+    let mut cryo_mut = unsafe { CryoMut::new(&mut cell) };
+    let _b = cryo_mut.read();
+    assert_eq!(cryo_mut.try_get_mut(), None);
 }
 
 #[test]

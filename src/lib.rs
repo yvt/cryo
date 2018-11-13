@@ -59,7 +59,7 @@
 //! # use cryo::*;
 //! # use std::thread::spawn;
 //! # let mut cell: usize = 0;
-//! with_cryo_mut(&mut cell, |cryo_mut: &mut CryoMut<usize>| {
+//! with_cryo_mut(&mut cell, |cryo_mut: &CryoMut<usize>| {
 //!     // Borrow `cryo_mut` and move it into a `'static` closure.
 //!     let mut borrow: CryoMutWriteGuard<usize> = cryo_mut.write();
 //!     spawn(move || { *borrow = 1; });
@@ -417,6 +417,6 @@ pub fn with_cryo<T, R>(x: &T, f: impl FnOnce(&Cryo<T>) -> R) -> R {
 }
 
 /// Call a given function with a constructed [`CryoMut`].
-pub fn with_cryo_mut<T, R>(x: &mut T, f: impl FnOnce(&mut CryoMut<T>) -> R) -> R {
-    f(&mut unsafe { CryoMut::new(x) })
+pub fn with_cryo_mut<T, R>(x: &mut T, f: impl FnOnce(&CryoMut<T>) -> R) -> R {
+    f(&unsafe { CryoMut::new(x) })
 }
