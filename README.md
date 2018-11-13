@@ -6,14 +6,23 @@
 
 This crate provides a cell-like type [`Cryo`] that is similar to `RefCell`
 except that it constrains the lifetime of its borrowed value
-through a runtime check mechanism. Intuitively, it effectively extends the
-lifetime of a reference to `'static`.
+through a runtime check mechanism, erasing the compile-time lifetime
+information. The lock guard [`CryoRef`] created from `Cryo` is
+`'static` and therefore can be used in various situations that require
+`'static` types, including:
+
+ - Store [`CryoRef`] temporarily in a `std::any::Any`-compatible container.
+ - Capture a reference to create a [Objective-C block](https://crates.io/crates/block).
 
 This works by, when a `Cryo` is dropped, blocking the current thread until
 all references to the contained value are dropped so that none of them can
-outlive the cell. Since it's possible to skip `drop`, the constructor of
-`Cryo` is marked as `unsafe`. Safe utility functions [`with_cryo`] and
-[`with_cryo_mut`] ensure that cells are dropped properly.
+outlive the cell.
+
+The constructor of `Cryo` is marked as `unsafe` because it's easy to
+break various assumptions essential to memory safety if `Cryo` values are
+not handled properly. Utility functions [`with_cryo`] and
+[`with_cryo_mut`] ensure safety by providing access to `Cryo` values in a
+controlled way.
 
 ## Examples
 
@@ -65,9 +74,9 @@ let borrow = with_cryo(&cell, |cryo| cryo.borrow());
 
 - While it's capable of extending the effective lifetime of a reference,
   it does not apply to nested references. For example, when
-  `&'a NonStaticType<'b>` is given, the borrowed type is
-  `CryoRef<NonStaticType<'b>>`, which is still bound to the original
-  lifetime.
+  `&'a NonStaticType<'b>` is supplied to the `Cryo`'s constructor, the
+  borrowed type is `CryoRef<NonStaticType<'b>>`, which is still partially
+  bound to the original lifetime.
 
 ## Details
 
