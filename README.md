@@ -4,14 +4,14 @@
 
 *Extend the lifetime of a reference. Safely.*
 
-This crate provides a cell-like type [`Cryo`] that is similar to `RefCell`
+This crate provides a cell-like type `Cryo` that is similar to `RefCell`
 except that it constrains the lifetime of its borrowed value
 through a runtime check mechanism, erasing the compile-time lifetime
-information. The lock guard [`CryoRef`] created from `Cryo` is
+information. The lock guard `CryoRef` created from `Cryo` is
 `'static` and therefore can be used in various situations that require
 `'static` types, including:
 
- - Store [`CryoRef`] temporarily in a `std::any::Any`-compatible container.
+ - Store `CryoRef` temporarily in a `std::any::Any`-compatible container.
  - Capture a reference to create a [Objective-C block](https://crates.io/crates/block).
 
 This works by, when a `Cryo` is dropped, blocking the current thread until
@@ -20,13 +20,13 @@ outlive the cell.
 
 The constructor of `Cryo` is marked as `unsafe` because it's easy to
 break various assumptions essential to memory safety if `Cryo` values are
-not handled properly. Utility functions [`with_cryo`] and
-[`with_cryo_mut`] ensure safety by providing access to `Cryo` values in a
+not handled properly. Utility functions `with_cryo` and
+`with_cryo_mut` ensure safety by providing access to `Cryo` values in a
 controlled way.
 
 ## Examples
 
-[`with_cryo`] and [`Cryo`]:
+`with_cryo` and `Cryo`:
 
 ```rust
 use std::thread::spawn;
@@ -47,10 +47,10 @@ with_cryo(&cell, |cryo: &Cryo<usize>| {
 });
 ```
 
-[`with_cryo_mut`] and [`CryoMut`]:
+`with_cryo_mut` and `CryoMut`:
 
 ```rust
-with_cryo_mut(&mut cell, |cryo_mut: &mut CryoMut<usize>| {
+with_cryo_mut(&mut cell, |cryo_mut: &CryoMut<usize>| {
     // Borrow `cryo_mut` and move it into a `'static` closure.
     let mut borrow: CryoMutWriteGuard<usize> = cryo_mut.write();
     spawn(move || { *borrow = 1; });
