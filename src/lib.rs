@@ -115,6 +115,9 @@ use std::{
 #[cfg(feature = "parking_lot")]
 extern crate parking_lot;
 
+extern crate stable_deref_trait;
+use stable_deref_trait::{CloneStableDeref, StableDeref};
+
 mod raw_rwlock;
 use self::raw_rwlock::RawRwLock;
 
@@ -340,6 +343,9 @@ impl<T: ?Sized> Deref for CryoMutReadGuard<T> {
     }
 }
 
+unsafe impl<T: ?Sized> StableDeref for CryoMutReadGuard<T> {}
+unsafe impl<T: ?Sized> CloneStableDeref for CryoMutReadGuard<T> {}
+
 impl<T: ?Sized> Clone for CryoMutReadGuard<T> {
     fn clone(&self) -> Self {
         unsafe {
@@ -385,6 +391,8 @@ impl<T: ?Sized> DerefMut for CryoMutWriteGuard<T> {
         unsafe { &mut *self.state().data }
     }
 }
+
+unsafe impl<T: ?Sized> StableDeref for CryoMutWriteGuard<T> {}
 
 impl<T: ?Sized + fmt::Debug> fmt::Debug for CryoMutWriteGuard<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
