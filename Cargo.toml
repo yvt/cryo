@@ -1,0 +1,17 @@
+[package]
+name = "cryo"
+version = "0.1.0"
+authors = ["yvt <i@yvt.jp>"]
+license = "MIT/Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/yvt/cryo"
+description = """
+Extend the lifetime of a reference. Safely.
+"""
+keywords = ["lifetime", "ownership", "reference"]
+
+[features]
+use_parking_lot = ["parking_lot"]
+
+[dependencies]
+parking_lot = { version = "0.6.4", optional = true }
