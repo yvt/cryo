@@ -82,12 +82,12 @@ let borrow = with_cryo(&cell, |cryo| cryo.borrow());
 
 ### Feature flags
 
- - `use_parking_lot` — Specifies to use `parking_lot` instead of `std::sync`.
+ - `parking_lot` — Specifies to use `parking_lot` instead of `std::sync`.
 
 ### Overhead
 
 `Cryo<T>` incurs moderate overhead due to the uses of `Mutex` and
-`Condvar`. This can be alleviated somewhat by using the `use_parking_lot`
+`Condvar`. This can be alleviated somewhat by using the `parking_lot`
 feature flag.
 
 ### Nomenclature

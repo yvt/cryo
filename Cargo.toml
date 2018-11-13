@@ -10,9 +10,6 @@ Extend the lifetime of a reference. Safely.
 """
 keywords = ["lifetime", "ownership", "reference"]
 
-[features]
-use_parking_lot = ["parking_lot"]
-
 [dependencies]
 parking_lot = { version = "0.6.4", optional = true }
 stable_deref_trait = "1.1.1"
