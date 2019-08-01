@@ -110,6 +110,7 @@ use std::{
     fmt,
     marker::PhantomData,
     ops::{Deref, DerefMut},
+    ptr::NonNull,
 };
 
 #[cfg(feature = "parking_lot")]
@@ -162,7 +163,7 @@ unsafe impl<'a, T: ?Sized + Send> Send for CryoMut<'a, T> {}
 unsafe impl<'a, T: ?Sized + Send + Sync> Sync for CryoMut<'a, T> {}
 
 struct State<T: ?Sized> {
-    data: *mut T,
+    data: NonNull<T>,
     lock: RawRwLock,
 }
 
@@ -172,7 +173,7 @@ pub type CryoRef<T> = CryoMutReadGuard<T>;
 
 /// The read lock guard type of [`CryoMut`].
 pub struct CryoMutReadGuard<T: ?Sized> {
-    state: *const State<T>,
+    state: NonNull<State<T>>,
 }
 
 unsafe impl<T: ?Sized + Send> Send for CryoMutReadGuard<T> {}
@@ -180,7 +181,7 @@ unsafe impl<T: ?Sized + Send + Sync> Sync for CryoMutReadGuard<T> {}
 
 /// The write lock guard type of [`CryoMut`].
 pub struct CryoMutWriteGuard<T: ?Sized> {
-    state: *const State<T>,
+    state: NonNull<State<T>>,
 }
 
 unsafe impl<T: ?Sized + Send> Send for CryoMutWriteGuard<T> {}
@@ -200,7 +201,7 @@ impl<'a, T: ?Sized + 'a> Cryo<'a, T> {
     pub unsafe fn new(x: &'a T) -> Self {
         Self {
             state: State {
-                data: x as *const T as *mut T,
+                data: NonNull::from(x),
                 lock: RawRwLock::new(),
             },
             _phantom: PhantomData,
@@ -210,14 +211,16 @@ impl<'a, T: ?Sized + 'a> Cryo<'a, T> {
     /// Borrow a cell using runtime lifetime rules.
     pub fn borrow(&self) -> CryoRef<T> {
         self.state.lock.raw_read();
-        CryoRef { state: &self.state }
+        CryoRef {
+            state: NonNull::from(&self.state),
+        }
     }
 
     /// Borrow a cell using compile-time lifetime rules.
     ///
     /// This operation is no-op since `Cryo` only can be immutably borrowed.
     pub fn get(&self) -> &'a T {
-        unsafe { &*(self.state.data as *const T) }
+        unsafe { &*self.state.data.as_ptr() }
     }
 }
 
@@ -250,7 +253,7 @@ impl<'a, T: ?Sized + 'a> CryoMut<'a, T> {
     pub unsafe fn new(x: &'a mut T) -> Self {
         Self {
             state: State {
-                data: x,
+                data: NonNull::from(x),
                 lock: RawRwLock::new(),
             },
             _phantom: PhantomData,
@@ -260,13 +263,17 @@ impl<'a, T: ?Sized + 'a> CryoMut<'a, T> {
     /// Acquire a read (shared) lock on a `CryoMut`.
     pub fn read(&self) -> CryoMutReadGuard<T> {
         self.state.lock.raw_read();
-        CryoMutReadGuard { state: &self.state }
+        CryoMutReadGuard {
+            state: NonNull::from(&self.state),
+        }
     }
 
     /// Attempt to acquire a read (shared) lock on a `CryoMut`.
     pub fn try_read(&self) -> Option<CryoMutReadGuard<T>> {
         if self.state.lock.raw_try_read() {
-            Some(CryoMutReadGuard { state: &self.state })
+            Some(CryoMutReadGuard {
+                state: NonNull::from(&self.state),
+            })
         } else {
             None
         }
@@ -275,13 +282,17 @@ impl<'a, T: ?Sized + 'a> CryoMut<'a, T> {
     /// Acquire a write (exclusive) lock on a `CryoMut`.
     pub fn write(&self) -> CryoMutWriteGuard<T> {
         self.state.lock.raw_write();
-        CryoMutWriteGuard { state: &self.state }
+        CryoMutWriteGuard {
+            state: NonNull::from(&self.state),
+        }
     }
 
     /// Attempt to acquire a write (exclusive) lock on a `CryoMut`.
     pub fn try_write(&self) -> Option<CryoMutWriteGuard<T>> {
         if self.state.lock.raw_try_write() {
-            Some(CryoMutWriteGuard { state: &self.state })
+            Some(CryoMutWriteGuard {
+                state: NonNull::from(&self.state),
+            })
         } else {
             None
         }
@@ -296,7 +307,7 @@ impl<'a, T: ?Sized + 'a> CryoMut<'a, T> {
             unsafe {
                 self.state.lock.raw_unlock_write();
             }
-            Some(unsafe { &mut *self.state.data })
+            Some(unsafe { self.state.data.as_mut() })
         } else {
             None
         }
@@ -331,7 +342,7 @@ impl<'a, T: ?Sized + 'a> Drop for CryoMut<'a, T> {
 
 impl<T: ?Sized> CryoMutReadGuard<T> {
     unsafe fn state(&self) -> &State<T> {
-        &*self.state
+        self.state.as_ref()
     }
 }
 
@@ -339,7 +350,7 @@ impl<T: ?Sized> Deref for CryoMutReadGuard<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        unsafe { &*(self.state().data as *const T) }
+        unsafe { self.state().data.as_ref() }
     }
 }
 
@@ -374,7 +385,7 @@ impl<T: ?Sized> Drop for CryoMutReadGuard<T> {
 
 impl<T: ?Sized> CryoMutWriteGuard<T> {
     unsafe fn state(&self) -> &State<T> {
-        &*self.state
+        self.state.as_ref()
     }
 }
 
@@ -382,13 +393,13 @@ impl<T: ?Sized> Deref for CryoMutWriteGuard<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        unsafe { &*(self.state().data as *const T) }
+        unsafe { self.state().data.as_ref() }
     }
 }
 
 impl<T: ?Sized> DerefMut for CryoMutWriteGuard<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        unsafe { &mut *self.state().data }
+        unsafe { &mut *self.state().data.as_ptr() }
     }
 }
 

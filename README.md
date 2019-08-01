@@ -4,6 +4,8 @@
 
 *Extend the lifetime of a reference. Safely.*
 
+Requires Rust 1.25.0 or later.
+
 This crate provides a cell-like type `Cryo` that is similar to `RefCell`
 except that it constrains the lifetime of its borrowed value
 through a runtime check mechanism, erasing the compile-time lifetime
