@@ -49,7 +49,7 @@ fn write() {
 #[test]
 fn try_get_mut() {
     let mut cell = 42;
-    let cryo_mut = CryoMut::<_, StdRawRwLock>::new(&mut cell);
+    let cryo_mut = CryoMut::<_, SyncLock>::new(&mut cell);
     pin_mut!(cryo_mut);
     assert_eq!(cryo_mut.try_get_mut(), Some(&mut 42));
 }
@@ -57,7 +57,7 @@ fn try_get_mut() {
 #[test]
 fn try_get_mut_fail() {
     let mut cell = 42;
-    let cryo_mut = CryoMut::<_, StdRawRwLock>::new(&mut cell);
+    let cryo_mut = CryoMut::<_, SyncLock>::new(&mut cell);
     pin_mut!(cryo_mut);
     let _b = cryo_mut.as_ref().read();
     assert_eq!(cryo_mut.try_get_mut(), None);

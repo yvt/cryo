@@ -13,8 +13,8 @@ information. The lock guard [`CryoRef`] created from `Cryo` is
 `'static` and therefore can be used in various situations that require
 `'static` types, including:
 
- - Store [`CryoRef`] temporarily in a `std::any::Any`-compatible container.
- - Capture a reference to create a [Objective-C block](https://crates.io/crates/block).
+ - Storing [`CryoRef`] temporarily in a `std::any::Any`-compatible container.
+ - Capturing a reference to create a [Objective-C block](https://crates.io/crates/block).
 
 This works by, when a `Cryo` is dropped, blocking the current thread until
 all references to the contained value are dropped so that none of them can
@@ -85,6 +85,8 @@ let borrow = {
 
 ### Feature flags
 
+ - `std` (enabled by default) enables [`SyncLock`].
+
  - `lock_api` enables the blanket implementation of [`RawRwLock`] on
    all types implementing [`lock_api::RawRwLock`], such as
    [`parking_lot::RawRwLock`].
@@ -93,7 +95,7 @@ let borrow = {
 
 ### Overhead
 
-`Cryo<T, StdRawRwLock>`'s creation, destruction, borrowing, and unborrowing
+`Cryo<T, SyncLock>`'s creation, destruction, borrowing, and unborrowing
 each take one or two atomic operations in the best cases.
 
 ### Nomenclature

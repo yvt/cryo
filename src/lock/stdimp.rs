@@ -3,11 +3,12 @@ use std::{
     thread,
 };
 
-use super::{NoSendMarker, RawRwLock, SendMarker};
+use super::{Lock, NoSendMarker, SendMarker};
 
-/// An implementation of [`RawRwLock`] that uses the synchronization facility
-/// provided by [`::std`].
-pub struct StdRawRwLock {
+/// An implementation of [`Lock`] that uses the synchronization facility
+/// provided by [`::std`]. Lock operations are tied to the creator thread, but
+/// unlock operations can be done in any threads.
+pub struct SyncLock {
     owner: thread::Thread,
     count: AtomicUsize,
 }
@@ -15,7 +16,7 @@ pub struct StdRawRwLock {
 const PARKED_FLAG: usize = !(usize::max_value() >> 1);
 const EXCLUSIVE_FLAG: usize = PARKED_FLAG >> 1;
 
-unsafe impl RawRwLock for StdRawRwLock {
+unsafe impl Lock for SyncLock {
     // Only the creator thread can lock
     type LockMarker = NoSendMarker;
 
@@ -134,7 +135,7 @@ unsafe impl RawRwLock for StdRawRwLock {
     }
 }
 
-impl StdRawRwLock {
+impl SyncLock {
     #[cold]
     fn lock_shared_slow(&self, old_count: usize) {
         if old_count == EXCLUSIVE_FLAG - 2 {

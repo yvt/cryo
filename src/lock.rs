@@ -24,7 +24,7 @@ pub struct SendMarker(());
 pub struct NoSendMarker(PhantomData<*mut ()>);
 
 /// A trait for readers-writer locks.
-pub unsafe trait RawRwLock {
+pub unsafe trait Lock {
     fn new() -> Self;
 
     /// The `Send`-ness of this type indicates whether a lock can only be
@@ -90,9 +90,9 @@ pub unsafe trait RawRwLock {
 }
 
 #[cfg(feature = "lock_api")]
-/// This crate's `RawRwLock` is automatically implemented for types implementing
+/// This crate's `LockTrait` is automatically implemented for types implementing
 /// [`lock_api::RawRwLock`]
-unsafe impl<T: lock_api::RawRwLock> RawRwLock for T {
+unsafe impl<T: lock_api::RawRwLock> Lock for T {
     type LockMarker = PhantomData<Self>;
     type UnlockMarker = T::GuardMarker;
 

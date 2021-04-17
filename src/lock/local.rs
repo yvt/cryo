@@ -1,16 +1,16 @@
 use core::{cell::Cell, debug_assert_eq};
 
-use super::{NoSendMarker, RawRwLock};
+use super::{Lock, NoSendMarker};
 
-/// A single-thread implementation of [`RawRwLock`]. Panics on borrow failure.
+/// A single-thread implementation of [`Lock`]. Panics on borrow failure.
 #[derive(Debug, Clone)]
-pub struct LocalRawRwLock {
+pub struct LocalLock {
     count: Cell<usize>,
 }
 
 const EXCLUSIVE: usize = usize::max_value();
 
-unsafe impl RawRwLock for LocalRawRwLock {
+unsafe impl Lock for LocalLock {
     fn new() -> Self {
         Self {
             count: Cell::new(0),
