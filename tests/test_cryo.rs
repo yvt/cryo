@@ -43,7 +43,7 @@ fn get() {
 
 #[test]
 fn block_on_drop() {
-    cryo!(let cryo: Cryo<_> = &42);
+    cryo!(let cryo: Cryo<_, cryo::SyncLock> = &42);
     let borrow = cryo.borrow();
     spawn(move || {
         sleep(Duration::from_millis(50));

@@ -29,7 +29,8 @@ single-thread use cases and would deadlock otherwise.</sub>
 
 ## Examples
 
-[`cryo!`] and [`Cryo`]:
+[`cryo!`], [`Cryo`], and [`LocalLock`] (single-thread lock
+implementation, used by default):
 
 ```rust
 use std::{thread::spawn, pin::Pin};
@@ -37,9 +38,38 @@ use std::{thread::spawn, pin::Pin};
 let cell: usize = 42;
 
 {
+    // `cryo!` uses `LocalLock` by default
     cryo!(let cryo: Cryo<usize> = &cell);
 
     // Borrow `cryo` and move it into a `'static` closure.
+    let borrow: CryoRef<usize, _> = cryo.borrow();
+    let closure: Box<dyn Fn()> =
+        Box::new(move || { assert_eq!(*borrow, 42); });
+    closure();
+
+    // Compile-time lifetime works as well.
+    assert_eq!(*cryo.get(), 42);
+
+    // When `cryo` is dropped, it will block until there are no other
+    // references to `cryo`. In this case, the program will not leave
+    // this block until the thread we just spawned completes execution.
+}
+```
+
+[`cryo!`], [`Cryo`], and [`SyncLock`] (thread-safe lock implementation):
+
+```rust
+use std::{thread::spawn, pin::Pin};
+
+let cell: usize = 42;
+
+{
+    // This this we are specifying the lock implementation
+    cryo!(let cryo: Cryo<usize, SyncLock> = &cell);
+
+    // Borrow `cryo` and move it into a `'static` closure.
+    // `CryoRef` can be sent to another thread because
+    // `SyncLock` is thread-safe.
     let borrow: CryoRef<usize, _> = cryo.borrow();
     spawn(move || { assert_eq!(*borrow, 42); });
 
@@ -52,11 +82,11 @@ let cell: usize = 42;
 }
 ```
 
-[`cryo!`] and [`CryoMut`]:
+[`cryo!`], [`CryoMut`], and [`SyncLock`]:
 
 ```rust
 {
-    cryo!(let cryo_mut: CryoMut<usize> = &mut cell);
+    cryo!(let cryo_mut: CryoMut<usize, SyncLock> = &mut cell);
 
     // Borrow `cryo_mut` and move it into a `'static` closure.
     let mut borrow: CryoMutWriteGuard<usize, _> = cryo_mut.write();
@@ -69,11 +99,24 @@ let cell: usize = 42;
 assert_eq!(cell, 1);
 ```
 
-**Don't** do this:
+**Don't** do these:
 
 ```rust
-// The following statement will deadlock because it attempts to drop
-// `Cryo` while a `CryoRef` is still referencing it
+// The following statement will DEADLOCK because it attempts to drop
+// `Cryo` while a `CryoRef` is still referencing it, and `Cryo`'s
+// destructor will wait for the `CryoRef` to be dropped first (which
+// will never happen)
+let borrow = {
+    cryo!(let cryo: Cryo<_, SyncLock> = &cell);
+    cryo.borrow()
+};
+```
+
+```rust
+// The following statement will ABORT because it attempts to drop
+// `Cryo` while a `CryoRef` is still referencing it, and `Cryo`'s
+// destructor will panic, knowing no amount of waiting would cause
+// the `CryoRef` to be dropped
 let borrow = {
     cryo!(let cryo: Cryo<_> = &cell);
     cryo.borrow()

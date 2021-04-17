@@ -66,7 +66,7 @@ fn try_get_mut_fail() {
 #[test]
 fn block_on_drop() {
     let mut var = 42;
-    cryo!(let cryo_mut: CryoMut<_> = &mut var);
+    cryo!(let cryo_mut: CryoMut<_, cryo::SyncLock> = &mut var);
     let borrow = cryo_mut.read();
     spawn(move || {
         sleep(Duration::from_millis(50));
@@ -77,7 +77,7 @@ fn block_on_drop() {
 #[test]
 fn block_by_exclusive_access() {
     let mut var = 42;
-    cryo!(let cryo_mut: CryoMut<_> = &mut var);
+    cryo!(let cryo_mut: CryoMut<_, cryo::SyncLock> = &mut var);
     let borrow = cryo_mut.read();
     spawn(move || {
         sleep(Duration::from_millis(100));

@@ -34,7 +34,8 @@
 //!
 //! # Examples
 //!
-//! [`cryo!`] and [`Cryo`]:
+//! [`cryo!`], [`Cryo`], and [`LocalLock`] (single-thread lock
+//! implementation, used by default):
 //!
 //! ```
 //! # use cryo::*;
@@ -43,9 +44,39 @@
 //! let cell: usize = 42;
 //!
 //! {
+//!     // `cryo!` uses `LocalLock` by default
 //!     cryo!(let cryo: Cryo<usize> = &cell);
 //!
 //!     // Borrow `cryo` and move it into a `'static` closure.
+//!     let borrow: CryoRef<usize, _> = cryo.borrow();
+//!     let closure: Box<dyn Fn()> =
+//!         Box::new(move || { assert_eq!(*borrow, 42); });
+//!     closure();
+//!
+//!     // Compile-time lifetime works as well.
+//!     assert_eq!(*cryo.get(), 42);
+//!
+//!     // When `cryo` is dropped, it will block until there are no other
+//!     // references to `cryo`. In this case, the program will not leave
+//!     // this block until the thread we just spawned completes execution.
+//! }
+//! ```
+//!
+//! [`cryo!`], [`Cryo`], and [`SyncLock`] (thread-safe lock implementation):
+//!
+//! ```
+//! # use cryo::*;
+//! use std::{thread::spawn, pin::Pin};
+//!
+//! let cell: usize = 42;
+//!
+//! {
+//!     // This this we are specifying the lock implementation
+//!     cryo!(let cryo: Cryo<usize, SyncLock> = &cell);
+//!
+//!     // Borrow `cryo` and move it into a `'static` closure.
+//!     // `CryoRef` can be sent to another thread because
+//!     // `SyncLock` is thread-safe.
 //!     let borrow: CryoRef<usize, _> = cryo.borrow();
 //!     spawn(move || { assert_eq!(*borrow, 42); });
 //!
@@ -58,14 +89,14 @@
 //! }
 //! ```
 //!
-//! [`cryo!`] and [`CryoMut`]:
+//! [`cryo!`], [`CryoMut`], and [`SyncLock`]:
 //!
 //! ```
 //! # use cryo::*;
 //! # use std::{thread::spawn, pin::Pin};
 //! # let mut cell: usize = 0;
 //! {
-//!     cryo!(let cryo_mut: CryoMut<usize> = &mut cell);
+//!     cryo!(let cryo_mut: CryoMut<usize, SyncLock> = &mut cell);
 //!
 //!     // Borrow `cryo_mut` and move it into a `'static` closure.
 //!     let mut borrow: CryoMutWriteGuard<usize, _> = cryo_mut.write();
@@ -78,13 +109,28 @@
 //! assert_eq!(cell, 1);
 //! ```
 //!
-//! **Don't** do this:
+//! **Don't** do these:
 //!
 //! ```no_run
 //! # use cryo::*;
 //! # let cell = 0usize;
-//! // The following statement will deadlock because it attempts to drop
-//! // `Cryo` while a `CryoRef` is still referencing it
+//! // The following statement will DEADLOCK because it attempts to drop
+//! // `Cryo` while a `CryoRef` is still referencing it, and `Cryo`'s
+//! // destructor will wait for the `CryoRef` to be dropped first (which
+//! // will never happen)
+//! let borrow = {
+//!     cryo!(let cryo: Cryo<_, SyncLock> = &cell);
+//!     cryo.borrow()
+//! };
+//! ```
+//!
+//! ```should_panic
+//! # use cryo::*;
+//! # let cell = 0usize;
+//! // The following statement will ABORT because it attempts to drop
+//! // `Cryo` while a `CryoRef` is still referencing it, and `Cryo`'s
+//! // destructor will panic, knowing no amount of waiting would cause
+//! // the `CryoRef` to be dropped
 //! let borrow = {
 //!     cryo!(let cryo: Cryo<_> = &cell);
 //!     cryo.borrow()
@@ -474,6 +520,37 @@ impl<T: ?Sized, Lock: crate::Lock> Drop for CryoMutWriteGuard<T, Lock> {
 }
 
 /// Construct a [`Cryo`] or [`CryoMut`] and bind it to a local variable.
+///
+/// # Examples
+///
+/// ```
+/// use cryo::cryo;
+/// cryo!(let cryo: Cryo<u8> = &42);
+/// assert_eq!(*cryo.borrow(), 42);
+/// ```
+///
+/// ```
+/// use cryo::cryo;
+/// let mut var = 42;
+/// {
+///     cryo!(let cryo: CryoMut<u8> = &mut var);
+///     *cryo.write() = 84;
+/// }
+/// assert_eq!(var, 84);
+/// ```
+///
+/// The lock implementation can be specified by an extra generic argument. It
+/// defaults to [`LocalLock`] when unspecified.
+///
+/// ```
+/// use cryo::cryo;
+/// use std::thread::spawn;
+/// cryo!(let cryo: Cryo<_, cryo::SyncLock> = &42);
+/// let borrow = cryo.borrow();
+/// spawn(move || {
+///     assert_eq!(*borrow, 42);
+/// });
+/// ```
 #[macro_export]
 macro_rules! cryo {
     // empty (base case for the recursion)
@@ -494,7 +571,6 @@ macro_rules! cryo {
 }
 
 #[doc(hidden)]
-#[cfg(feature = "std")]
 #[macro_export]
 macro_rules! __LockOrDefault {
     // Custom
@@ -503,25 +579,6 @@ macro_rules! __LockOrDefault {
     };
     // Default
     () => {
-        $crate::SyncLock
-    };
-}
-
-#[doc(hidden)]
-#[cfg(not(feature = "std"))]
-#[macro_export]
-macro_rules! __LockOrDefault {
-    // Custom
-    (($t:ty)) => {
-        $t
-    };
-    // Default
-    () => {
-        compile_error!(
-            "`std` feature is disabled; the default Lock implementation \
-            (`SyncLock`) is unavailable. please specify one (e.g., \
-            `Cryo<_, MyRawRwLock>`)
-            "
-        )
+        $crate::LocalLock
     };
 }
