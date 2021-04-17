@@ -16,9 +16,16 @@ information. The lock guard [`CryoRef`] created from `Cryo` is
  - Storing [`CryoRef`] temporarily in a `std::any::Any`-compatible container.
  - Capturing a reference to create a [Objective-C block](https://crates.io/crates/block).
 
-This works by, when a `Cryo` is dropped, blocking the current thread until
-all references to the contained value are dropped so that none of them can
-outlive the cell.
+This works by, when a `Cryo` is dropped, not letting the current thread's
+execution move forward (at least¹) until all references to the expiring
+`Cryo` are dropped so that none of them can outlive the `Cryo`.
+This is implemented by [readers-writer locks] under the hood.
+
+[readers-writer locks]: https://en.wikipedia.org/wiki/Readers–writer_lock
+
+<sub>¹ [`SyncLock`] blocks the current thread's execution on lock failure.
+[`LocalLock`], on the other hand, panics because it's designed for
+single-thread use cases and would deadlock otherwise.</sub>
 
 ## Examples
 
@@ -87,7 +94,7 @@ let borrow = {
 
  - `std` (enabled by default) enables [`SyncLock`].
 
- - `lock_api` enables the blanket implementation of [`RawRwLock`] on
+ - `lock_api` enables the blanket implementation of [`Lock`] on
    all types implementing [`lock_api::RawRwLock`], such as
    [`parking_lot::RawRwLock`].
 

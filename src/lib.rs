@@ -21,9 +21,16 @@
 //!  - Storing [`CryoRef`] temporarily in a `std::any::Any`-compatible container.
 //!  - Capturing a reference to create a [Objective-C block](https://crates.io/crates/block).
 //!
-//! This works by, when a `Cryo` is dropped, blocking the current thread until
-//! all references to the contained value are dropped so that none of them can
-//! outlive the cell.
+//! This works by, when a `Cryo` is dropped, not letting the current thread's
+//! execution move forward (at least¹) until all references to the expiring
+//! `Cryo` are dropped so that none of them can outlive the `Cryo`.
+//! This is implemented by [readers-writer locks] under the hood.
+//!
+//! [readers-writer locks]: https://en.wikipedia.org/wiki/Readers–writer_lock
+//!
+//! <sub>¹ [`SyncLock`] blocks the current thread's execution on lock failure.
+//! [`LocalLock`], on the other hand, panics because it's designed for
+//! single-thread use cases and would deadlock otherwise.</sub>
 //!
 //! # Examples
 //!
@@ -140,9 +147,10 @@ pub use self::lock::*;
 ///
 /// `Cryo` is a variation of [`CryoMut`] that only can be immutably borrowed.
 ///
-/// When a `Cryo` is dropped, the current thread will be blocked until all
-/// references to the contained value are dropped. This ensures that none of
-/// the references can outlive the referent.
+/// When a `Cryo` is dropped, the current thread's execution will be
+/// prevented from moving forward (at least) until all references to the
+/// expiring `Cryo` are dropped. This ensures that none of the outstanding
+/// references can outlive the referent.
 ///
 /// See the [module-level documentation] for more details.
 ///
@@ -166,9 +174,10 @@ unsafe impl<'a, T: ?Sized + Send + Sync, Lock: crate::Lock> Sync for Cryo<'a, T,
 ///
 /// `CryoMut` is a variation of [`Cryo`] that can be mutably borrowed.
 ///
-/// When a `CryoMut` is dropped, the current thread will be blocked until all
-/// references to the contained value are dropped. This ensures that none of
-/// the references can outlive the referent.
+/// When a `CryoMut` is dropped, the current thread's execution will be
+/// prevented from moving forward (at least) until all references to the
+/// expiring `CryoMut` are dropped. This ensures that none of the outstanding
+/// references can outlive the referent.
 ///
 /// See the [module-level documentation] for more details.
 ///
