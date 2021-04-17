@@ -18,8 +18,8 @@
 //! `'static` and therefore can be used in various situations that require
 //! `'static` types, including:
 //!
-//!  - Store [`CryoRef`] temporarily in a `std::any::Any`-compatible container.
-//!  - Capture a reference to create a [Objective-C block](https://crates.io/crates/block).
+//!  - Storing [`CryoRef`] temporarily in a `std::any::Any`-compatible container.
+//!  - Capturing a reference to create a [Objective-C block](https://crates.io/crates/block).
 //!
 //! This works by, when a `Cryo` is dropped, blocking the current thread until
 //! all references to the contained value are dropped so that none of them can
