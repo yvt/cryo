@@ -31,11 +31,11 @@ controlled way.
 [`with_cryo`] and [`Cryo`]:
 
 ```rust
-use std::thread::spawn;
+use std::{thread::spawn, pin::Pin};
 
 let cell: usize = 42;
 
-with_cryo(&cell, |cryo: &Cryo<usize, _>| {
+with_cryo(&cell, |cryo: Pin<&Cryo<usize, _>>| {
     // Borrow `cryo` and move it into a `'static` closure.
     let borrow: CryoRef<usize, _> = cryo.borrow();
     spawn(move || { assert_eq!(*borrow, 42); });
@@ -52,7 +52,7 @@ with_cryo(&cell, |cryo: &Cryo<usize, _>| {
 [`with_cryo_mut`] and [`CryoMut`]:
 
 ```rust
-with_cryo_mut(&mut cell, |cryo_mut: &CryoMut<usize, _>| {
+with_cryo_mut(&mut cell, |cryo_mut: Pin<&CryoMut<usize, _>>| {
     // Borrow `cryo_mut` and move it into a `'static` closure.
     let mut borrow: CryoMutWriteGuard<usize, _> = cryo_mut.write();
     spawn(move || { *borrow = 1; });

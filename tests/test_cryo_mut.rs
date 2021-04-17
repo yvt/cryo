@@ -8,7 +8,9 @@
 // except according to those terms.
 //
 extern crate cryo;
+extern crate pin_utils;
 use cryo::*;
+use pin_utils::pin_mut;
 
 use std::{
     thread::{sleep, spawn},
@@ -46,15 +48,17 @@ fn write() {
 #[test]
 fn try_get_mut() {
     let mut cell = 42;
-    let mut cryo_mut = unsafe { CryoMut::<_, StdRawRwLock>::new(&mut cell) };
+    let cryo_mut = CryoMut::<_, StdRawRwLock>::new(&mut cell);
+    pin_mut!(cryo_mut);
     assert_eq!(cryo_mut.try_get_mut(), Some(&mut 42));
 }
 
 #[test]
 fn try_get_mut_fail() {
     let mut cell = 42;
-    let mut cryo_mut = unsafe { CryoMut::<_, StdRawRwLock>::new(&mut cell) };
-    let _b = cryo_mut.read();
+    let cryo_mut = CryoMut::<_, StdRawRwLock>::new(&mut cell);
+    pin_mut!(cryo_mut);
+    let _b = cryo_mut.as_ref().read();
     assert_eq!(cryo_mut.try_get_mut(), None);
 }
 

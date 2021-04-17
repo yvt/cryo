@@ -16,6 +16,7 @@ maintenance = { status = "passively-maintained" }
 [dependencies]
 lock_api = { version = "0.4.2", optional = true }
 stable_deref_trait = "1.1.1"
+pin-utils = "0.1.0"
 
 [package.metadata.docs.rs]
 all-features = true
