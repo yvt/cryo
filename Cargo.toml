@@ -14,6 +14,10 @@ edition = "2018"
 [badges]
 maintenance = { status = "passively-maintained" }
 
+[features]
+default = ["std"]
+std = []
+
 [dependencies]
 lock_api = { version = "0.4.2", optional = true }
 stable_deref_trait = "1.1.1"

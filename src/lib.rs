@@ -96,6 +96,8 @@
 //!
 //! ## Feature flags
 //!
+//!  - `std` (enabled by default) enables [`StdRawRwLock`].
+//!
 //!  - `lock_api` enables the blanket implementation of [`RawRwLock`] on
 //!    all types implementing [`lock_api::RawRwLock`], such as
 //!    [`parking_lot::RawRwLock`].
@@ -112,15 +114,19 @@
 //! From [cryopreservation](https://en.wikipedia.org/wiki/Cryopreservation).
 //!
 #![warn(rust_2018_idioms)]
+#![no_std]
 
-use stable_deref_trait::{CloneStableDeref, StableDeref};
-use std::{
+use core::{
     fmt,
     marker::{PhantomData, PhantomPinned},
     ops::{Deref, DerefMut},
     pin::Pin,
     ptr::NonNull,
 };
+use stable_deref_trait::{CloneStableDeref, StableDeref};
+
+#[cfg(feature = "std")]
+extern crate std;
 
 // Used by `cryo!`
 #[doc(hidden)]
@@ -479,6 +485,7 @@ macro_rules! cryo {
 }
 
 #[doc(hidden)]
+#[cfg(feature = "std")]
 #[macro_export]
 macro_rules! __RwLockOrDefault {
     // Custom
@@ -488,5 +495,24 @@ macro_rules! __RwLockOrDefault {
     // Default
     () => {
         $crate::StdRawRwLock
+    };
+}
+
+#[doc(hidden)]
+#[cfg(not(feature = "std"))]
+#[macro_export]
+macro_rules! __RwLockOrDefault {
+    // Custom
+    (($t:ty)) => {
+        $t
+    };
+    // Default
+    () => {
+        compile_error!(
+            "`std` feature is disabled; the default RwLock implementation \
+            (`StdRawRwLock`) is unavailable. please specify one (e.g., \
+            `Cryo<_, MyRawRwLock>`)
+            "
+        )
     };
 }

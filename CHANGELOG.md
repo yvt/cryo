@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Breaking: `Cryo` is now generalized over lock implementations. The default implementation was rewritten from scratch. The new implementation constrains the access of `Cryo` to a single thread but provides an improved performance.
 - Breaking: `parking-lot` feature was removed.
 - Breaking: `Cryo` now utilizes `std::pin::Pin` (instead of making the constructor `unsafe fn`) for pinning. Most methods now take `self: Pin<&Cryo<_, _>>` as the receiver.
+- Breaking: `with_cryo[_mut]` was superseded by `cryo!`.
+- Breaking: `std` feature was added.
 
 ## [0.1.6] - 20xx-xx-xx
 ## [0.1.5] - 20xx-xx-xx
