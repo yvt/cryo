@@ -4,16 +4,16 @@
 
 *Extend the lifetime of a reference. Safely.*
 
-Requires Rust 1.26.0 or later.
+Requires Rust 1.34.0 or later.
 
-This crate provides a cell-like type `Cryo` that is similar to `RefCell`
+This crate provides a cell-like type [`Cryo`] that is similar to `RefCell`
 except that it constrains the lifetime of its borrowed value
 through a runtime check mechanism, erasing the compile-time lifetime
-information. The lock guard `CryoRef` created from `Cryo` is
+information. The lock guard [`CryoRef`] created from `Cryo` is
 `'static` and therefore can be used in various situations that require
 `'static` types, including:
 
- - Store `CryoRef` temporarily in a `std::any::Any`-compatible container.
+ - Store [`CryoRef`] temporarily in a `std::any::Any`-compatible container.
  - Capture a reference to create a [Objective-C block](https://crates.io/crates/block).
 
 This works by, when a `Cryo` is dropped, blocking the current thread until
@@ -22,22 +22,22 @@ outlive the cell.
 
 The constructor of `Cryo` is marked as `unsafe` because it's easy to
 break various assumptions essential to memory safety if `Cryo` values are
-not handled properly. Utility functions `with_cryo` and
-`with_cryo_mut` ensure safety by providing access to `Cryo` values in a
+not handled properly. Utility functions [`with_cryo`] and
+[`with_cryo_mut`] ensure safety by providing access to `Cryo` values in a
 controlled way.
 
 ## Examples
 
-`with_cryo` and `Cryo`:
+[`with_cryo`] and [`Cryo`]:
 
 ```rust
 use std::thread::spawn;
 
 let cell: usize = 42;
 
-with_cryo(&cell, |cryo: &Cryo<usize>| {
+with_cryo(&cell, |cryo: &Cryo<usize, _>| {
     // Borrow `cryo` and move it into a `'static` closure.
-    let borrow: CryoRef<usize> = cryo.borrow();
+    let borrow: CryoRef<usize, _> = cryo.borrow();
     spawn(move || { assert_eq!(*borrow, 42); });
 
     // Compile-time lifetime works as well.
@@ -49,12 +49,12 @@ with_cryo(&cell, |cryo: &Cryo<usize>| {
 });
 ```
 
-`with_cryo_mut` and `CryoMut`:
+[`with_cryo_mut`] and [`CryoMut`]:
 
 ```rust
-with_cryo_mut(&mut cell, |cryo_mut: &CryoMut<usize>| {
+with_cryo_mut(&mut cell, |cryo_mut: &CryoMut<usize, _>| {
     // Borrow `cryo_mut` and move it into a `'static` closure.
-    let mut borrow: CryoMutWriteGuard<usize> = cryo_mut.write();
+    let mut borrow: CryoMutWriteGuard<usize, _> = cryo_mut.write();
     spawn(move || { *borrow = 1; });
 
     // When `cryo_mut` is dropped, it will block until there are no other
@@ -84,13 +84,16 @@ let borrow = with_cryo(&cell, |cryo| cryo.borrow());
 
 ### Feature flags
 
- - `parking_lot` — Specifies to use `parking_lot` instead of `std::sync`.
+ - `lock_api` enables the blanket implementation of [`RawRwLock`] on
+   all types implementing [`lock_api::RawRwLock`], such as
+   [`parking_lot::RawRwLock`].
+
+[`parking_lot::RawRwLock`]: https://docs.rs/parking_lot/0.11.1/parking_lot/struct.RawRwLock.html
 
 ### Overhead
 
-`Cryo<T>` incurs moderate overhead due to the uses of `Mutex` and
-`Condvar`. This can be alleviated somewhat by using the `parking_lot`
-feature flag.
+`Cryo<T, StdRawRwLock>`'s creation, destruction, borrowing, and unborrowing
+each take one or two atomic operations in the best cases.
 
 ### Nomenclature
 

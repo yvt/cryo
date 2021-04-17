@@ -46,14 +46,14 @@ fn write() {
 #[test]
 fn try_get_mut() {
     let mut cell = 42;
-    let mut cryo_mut = unsafe { CryoMut::new(&mut cell) };
+    let mut cryo_mut = unsafe { CryoMut::<_, StdRawRwLock>::new(&mut cell) };
     assert_eq!(cryo_mut.try_get_mut(), Some(&mut 42));
 }
 
 #[test]
 fn try_get_mut_fail() {
     let mut cell = 42;
-    let mut cryo_mut = unsafe { CryoMut::new(&mut cell) };
+    let mut cryo_mut = unsafe { CryoMut::<_, StdRawRwLock>::new(&mut cell) };
     let _b = cryo_mut.read();
     assert_eq!(cryo_mut.try_get_mut(), None);
 }
@@ -66,5 +66,26 @@ fn block_on_drop() {
             sleep(Duration::from_millis(50));
             drop(borrow);
         });
+    });
+}
+
+#[test]
+fn block_by_exclusive_access() {
+    with_cryo_mut(&mut 42, |cryo_mut| {
+        let borrow = cryo_mut.read();
+        spawn(move || {
+            sleep(Duration::from_millis(100));
+            assert_eq!(*borrow, 42);
+            drop(borrow);
+        });
+        assert_eq!(std::mem::replace(&mut *cryo_mut.write(), 56), 42);
+
+        let mut borrow = cryo_mut.write();
+        spawn(move || {
+            sleep(Duration::from_millis(100));
+            assert_eq!(std::mem::replace(&mut *borrow, 72), 56);
+            drop(borrow);
+        });
+        assert_eq!(std::mem::replace(&mut *cryo_mut.write(), 100), 72);
     });
 }

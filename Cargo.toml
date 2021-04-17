@@ -14,5 +14,8 @@ keywords = ["lifetime", "ownership", "reference"]
 maintenance = { status = "passively-maintained" }
 
 [dependencies]
-parking_lot = { version = ">= 0.6, < 0.10", optional = true }
+lock_api = { version = "0.4.2", optional = true }
 stable_deref_trait = "1.1.1"
+
+[package.metadata.docs.rs]
+all-features = true
