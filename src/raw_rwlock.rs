@@ -14,6 +14,9 @@ mod stdimp;
 #[cfg(feature = "std")]
 pub use self::stdimp::*;
 
+mod local;
+pub use self::local::*;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SendMarker(());
 
