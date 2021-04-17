@@ -20,22 +20,18 @@ This works by, when a `Cryo` is dropped, blocking the current thread until
 all references to the contained value are dropped so that none of them can
 outlive the cell.
 
-The constructor of `Cryo` is marked as `unsafe` because it's easy to
-break various assumptions essential to memory safety if `Cryo` values are
-not handled properly. Utility functions [`with_cryo`] and
-[`with_cryo_mut`] ensure safety by providing access to `Cryo` values in a
-controlled way.
-
 ## Examples
 
-[`with_cryo`] and [`Cryo`]:
+[`cryo!`] and [`Cryo`]:
 
 ```rust
 use std::{thread::spawn, pin::Pin};
 
 let cell: usize = 42;
 
-with_cryo(&cell, |cryo: Pin<&Cryo<usize, _>>| {
+{
+    cryo!(let cryo: Cryo<usize> = &cell);
+
     // Borrow `cryo` and move it into a `'static` closure.
     let borrow: CryoRef<usize, _> = cryo.borrow();
     spawn(move || { assert_eq!(*borrow, 42); });
@@ -44,23 +40,25 @@ with_cryo(&cell, |cryo: Pin<&Cryo<usize, _>>| {
     assert_eq!(*cryo.get(), 42);
 
     // When `cryo` is dropped, it will block until there are no other
-    // references to `cryo`. In this case, `with_cryo` will not return
-    // until the thread we just spawned completes execution.
-});
+    // references to `cryo`. In this case, the program will not leave
+    // this block until the thread we just spawned completes execution.
+}
 ```
 
-[`with_cryo_mut`] and [`CryoMut`]:
+[`cryo!`] and [`CryoMut`]:
 
 ```rust
-with_cryo_mut(&mut cell, |cryo_mut: Pin<&CryoMut<usize, _>>| {
+{
+    cryo!(let cryo_mut: CryoMut<usize> = &mut cell);
+
     // Borrow `cryo_mut` and move it into a `'static` closure.
     let mut borrow: CryoMutWriteGuard<usize, _> = cryo_mut.write();
     spawn(move || { *borrow = 1; });
 
     // When `cryo_mut` is dropped, it will block until there are no other
-    // references to `cryo_mut`.  In this case, `with_cryo_mut` will not
-    // return until the thread we just spawned completes execution.
-});
+    // references to `cryo_mut`. In this case, the program will not leave
+    // this block until the thread we just spawned completes execution
+}
 assert_eq!(cell, 1);
 ```
 
@@ -69,7 +67,10 @@ assert_eq!(cell, 1);
 ```rust
 // The following statement will deadlock because it attempts to drop
 // `Cryo` while a `CryoRef` is still referencing it
-let borrow = with_cryo(&cell, |cryo| cryo.borrow());
+let borrow = {
+    cryo!(let cryo: Cryo<_> = &cell);
+    cryo.borrow()
+};
 ```
 
 ## Caveats

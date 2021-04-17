@@ -27,7 +27,7 @@
 //!
 //! # Examples
 //!
-//! [`with_cryo`] and [`Cryo`]:
+//! [`cryo!`] and [`Cryo`]:
 //!
 //! ```
 //! # use cryo::*;
@@ -35,7 +35,9 @@
 //!
 //! let cell: usize = 42;
 //!
-//! with_cryo(&cell, |cryo: Pin<&Cryo<'_, usize, _>>| {
+//! {
+//!     cryo!(let cryo: Cryo<usize> = &cell);
+//!
 //!     // Borrow `cryo` and move it into a `'static` closure.
 //!     let borrow: CryoRef<usize, _> = cryo.borrow();
 //!     spawn(move || { assert_eq!(*borrow, 42); });
@@ -44,26 +46,28 @@
 //!     assert_eq!(*cryo.get(), 42);
 //!
 //!     // When `cryo` is dropped, it will block until there are no other
-//!     // references to `cryo`. In this case, `with_cryo` will not return
-//!     // until the thread we just spawned completes execution.
-//! });
+//!     // references to `cryo`. In this case, the program will not leave
+//!     // this block until the thread we just spawned completes execution.
+//! }
 //! ```
 //!
-//! [`with_cryo_mut`] and [`CryoMut`]:
+//! [`cryo!`] and [`CryoMut`]:
 //!
 //! ```
 //! # use cryo::*;
 //! # use std::{thread::spawn, pin::Pin};
 //! # let mut cell: usize = 0;
-//! with_cryo_mut(&mut cell, |cryo_mut: Pin<&CryoMut<'_, usize, _>>| {
+//! {
+//!     cryo!(let cryo_mut: CryoMut<usize> = &mut cell);
+//!
 //!     // Borrow `cryo_mut` and move it into a `'static` closure.
 //!     let mut borrow: CryoMutWriteGuard<usize, _> = cryo_mut.write();
 //!     spawn(move || { *borrow = 1; });
 //!
 //!     // When `cryo_mut` is dropped, it will block until there are no other
-//!     // references to `cryo_mut`.  In this case, `with_cryo_mut` will not
-//!     // return until the thread we just spawned completes execution.
-//! });
+//!     // references to `cryo_mut`. In this case, the program will not leave
+//!     // this block until the thread we just spawned completes execution
+//! }
 //! assert_eq!(cell, 1);
 //! ```
 //!
@@ -74,7 +78,10 @@
 //! # let cell = 0usize;
 //! // The following statement will deadlock because it attempts to drop
 //! // `Cryo` while a `CryoRef` is still referencing it
-//! let borrow = with_cryo(&cell, |cryo| cryo.borrow());
+//! let borrow = {
+//!     cryo!(let cryo: Cryo<_> = &cell);
+//!     cryo.borrow()
+//! };
 //! ```
 //!
 //! # Caveats
@@ -106,7 +113,6 @@
 //!
 #![warn(rust_2018_idioms)]
 
-use pin_utils::pin_mut;
 use stable_deref_trait::{CloneStableDeref, StableDeref};
 use std::{
     fmt,
@@ -115,6 +121,10 @@ use std::{
     pin::Pin,
     ptr::NonNull,
 };
+
+// Used by `cryo!`
+#[doc(hidden)]
+pub use pin_utils::pin_mut;
 
 mod raw_rwlock;
 pub use self::raw_rwlock::*;
@@ -448,19 +458,35 @@ impl<T: ?Sized, RwLock: RawRwLock> Drop for CryoMutWriteGuard<T, RwLock> {
     }
 }
 
-/// Call a given function with a constructed [`Cryo`].
-pub fn with_cryo<T, R>(x: &T, f: impl FnOnce(Pin<&Cryo<'_, T, StdRawRwLock>>) -> R) -> R {
-    let c = Cryo::new(x);
-    pin_mut!(c);
-    f(c.as_ref())
+/// Construct a [`Cryo`] or [`CryoMut`] and bind it to a local variable.
+#[macro_export]
+macro_rules! cryo {
+    // empty (base case for the recursion)
+    () => {};
+
+    // process multiple declarations
+    ($(#[$attr:meta])* let $name:ident: $Cryo:ident< $t:ty $(, $RwLock:ty)? > = $init:expr; $($rest:tt)*) => (
+        $crate::cryo!($(#[$attr])* let $name: $Cryo<$t $(, $RwLock)?> = $init);
+        $crate::cryo!($($rest)*);
+    );
+
+    // handle a single declaration
+    ($(#[$attr:meta])* let $name:ident: $Cryo:ident< $t:ty $(, $RwLock:ty)? > = $init:expr) => (
+        let cryo = $crate::$Cryo::<$t, $crate::__RwLockOrDefault!($(($RwLock))?)>::new($init);
+        $crate::pin_mut!(cryo);
+        let $name = cryo.into_ref();
+    );
 }
 
-/// Call a given function with a constructed [`CryoMut`].
-pub fn with_cryo_mut<T, R>(
-    x: &mut T,
-    f: impl FnOnce(Pin<&CryoMut<'_, T, StdRawRwLock>>) -> R,
-) -> R {
-    let c = CryoMut::new(x);
-    pin_mut!(c);
-    f(c.as_ref())
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __RwLockOrDefault {
+    // Custom
+    (($t:ty)) => {
+        $t
+    };
+    // Default
+    () => {
+        $crate::StdRawRwLock
+    };
 }
