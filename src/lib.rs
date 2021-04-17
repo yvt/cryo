@@ -209,6 +209,7 @@ unsafe impl<T: ?Sized + Send, RwLock: RawRwLock> Send for CryoMutWriteGuard<T, R
 
 impl<'a, T: ?Sized + 'a, RwLock: RawRwLock> Cryo<'a, T, RwLock> {
     /// Construct a new `Cryo`.
+    #[inline]
     pub fn new(x: &'a T) -> Self {
         Self {
             state: State {
@@ -220,6 +221,7 @@ impl<'a, T: ?Sized + 'a, RwLock: RawRwLock> Cryo<'a, T, RwLock> {
     }
 
     /// Borrow a cell using runtime lifetime rules.
+    #[inline]
     pub fn borrow(self: Pin<&Self>) -> CryoRef<T, RwLock> {
         // Safety: `Cryo`'s `Send`-ness is constrained by that of `RwLock::LockMarker`
         unsafe { self.state.lock.lock_shared() };
@@ -231,6 +233,7 @@ impl<'a, T: ?Sized + 'a, RwLock: RawRwLock> Cryo<'a, T, RwLock> {
     /// Borrow a cell using compile-time lifetime rules.
     ///
     /// This operation is no-op since `Cryo` only can be immutably borrowed.
+    #[inline]
     pub fn get(&self) -> &'a T {
         unsafe { &*self.state.data.as_ptr() }
     }
@@ -243,6 +246,7 @@ impl<'a, T: ?Sized + fmt::Debug, RwLock: RawRwLock> fmt::Debug for Cryo<'a, T, R
 }
 
 impl<'a, T: ?Sized + 'a, RwLock: RawRwLock> Drop for Cryo<'a, T, RwLock> {
+    #[inline]
     fn drop(&mut self) {
         // Safety: `Cryo`'s `Send`-ness is constrained by that of `RwLock::LockMarker`
         unsafe { self.state.lock.lock_exclusive() };
@@ -253,6 +257,7 @@ impl<'a, T: ?Sized + 'a, RwLock: RawRwLock> Drop for Cryo<'a, T, RwLock> {
 
 impl<'a, T: ?Sized + 'a, RwLock: RawRwLock> CryoMut<'a, T, RwLock> {
     /// Construct a new `CryoMut`.
+    #[inline]
     pub fn new(x: &'a mut T) -> Self {
         Self {
             state: State {
@@ -264,6 +269,7 @@ impl<'a, T: ?Sized + 'a, RwLock: RawRwLock> CryoMut<'a, T, RwLock> {
     }
 
     /// Acquire a read (shared) lock on a `CryoMut`.
+    #[inline]
     pub fn read(self: Pin<&Self>) -> CryoMutReadGuard<T, RwLock> {
         // Safety: `CryoMut`'s `Send`-ness is constrained by that of `RwLock::LockMarker`
         unsafe { self.state.lock.lock_shared() };
@@ -273,6 +279,7 @@ impl<'a, T: ?Sized + 'a, RwLock: RawRwLock> CryoMut<'a, T, RwLock> {
     }
 
     /// Attempt to acquire a read (shared) lock on a `CryoMut`.
+    #[inline]
     pub fn try_read(self: Pin<&Self>) -> Option<CryoMutReadGuard<T, RwLock>> {
         // Safety: `CryoMut`'s `Send`-ness is constrained by that of `RwLock::LockMarker`
         if unsafe { self.state.lock.try_lock_shared() } {
@@ -285,6 +292,7 @@ impl<'a, T: ?Sized + 'a, RwLock: RawRwLock> CryoMut<'a, T, RwLock> {
     }
 
     /// Acquire a write (exclusive) lock on a `CryoMut`.
+    #[inline]
     pub fn write(self: Pin<&Self>) -> CryoMutWriteGuard<T, RwLock> {
         // Safety: `CryoMut`'s `Send`-ness is constrained by that of `RwLock::LockMarker`
         unsafe { self.state.lock.lock_exclusive() };
@@ -294,6 +302,7 @@ impl<'a, T: ?Sized + 'a, RwLock: RawRwLock> CryoMut<'a, T, RwLock> {
     }
 
     /// Attempt to acquire a write (exclusive) lock on a `CryoMut`.
+    #[inline]
     pub fn try_write(self: Pin<&Self>) -> Option<CryoMutWriteGuard<T, RwLock>> {
         // Safety: `CryoMut`'s `Send`-ness is constrained by that of `RwLock::LockMarker`
         if unsafe { self.state.lock.try_lock_exclusive() } {
@@ -309,6 +318,7 @@ impl<'a, T: ?Sized + 'a, RwLock: RawRwLock> CryoMut<'a, T, RwLock> {
     ///
     /// Returns `None` if the `CryoMut` is already borrowed via
     /// [`CryoMutReadGuard`] or [`CryoMutWriteGuard`].
+    #[inline]
     pub fn try_get_mut<'this>(self: Pin<&'this mut Self>) -> Option<&'this mut T> {
         // FIXME: The lifetime elision is not possible here because of
         //        <https://github.com/rust-lang/rust/issues/52675>
@@ -342,6 +352,7 @@ impl<'a, T: ?Sized + fmt::Debug, RwLock: RawRwLock> fmt::Debug for CryoMut<'a, T
 }
 
 impl<'a, T: ?Sized + 'a, RwLock: RawRwLock> Drop for CryoMut<'a, T, RwLock> {
+    #[inline]
     fn drop(&mut self) {
         // Safety: `CryoMut`'s `Send`-ness is constrained by that of `RwLock::LockMarker`
         unsafe { self.state.lock.lock_exclusive() };
@@ -351,6 +362,7 @@ impl<'a, T: ?Sized + 'a, RwLock: RawRwLock> Drop for CryoMut<'a, T, RwLock> {
 }
 
 impl<T: ?Sized, RwLock: RawRwLock> CryoMutReadGuard<T, RwLock> {
+    #[inline]
     unsafe fn state(&self) -> &State<T, RwLock> {
         self.state.as_ref()
     }
@@ -359,6 +371,7 @@ impl<T: ?Sized, RwLock: RawRwLock> CryoMutReadGuard<T, RwLock> {
 impl<T: ?Sized, RwLock: RawRwLock> Deref for CryoMutReadGuard<T, RwLock> {
     type Target = T;
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         unsafe { self.state().data.as_ref() }
     }
@@ -368,6 +381,7 @@ unsafe impl<T: ?Sized, RwLock: RawRwLock> StableDeref for CryoMutReadGuard<T, Rw
 unsafe impl<T: ?Sized, RwLock: RawRwLock> CloneStableDeref for CryoMutReadGuard<T, RwLock> {}
 
 impl<T: ?Sized, RwLock: RawRwLock> Clone for CryoMutReadGuard<T, RwLock> {
+    #[inline]
     fn clone(&self) -> Self {
         unsafe {
             self.state().lock.lock_shared();
@@ -385,6 +399,7 @@ impl<T: ?Sized + fmt::Debug, RwLock: RawRwLock> fmt::Debug for CryoMutReadGuard<
 }
 
 impl<T: ?Sized, RwLock: RawRwLock> Drop for CryoMutReadGuard<T, RwLock> {
+    #[inline]
     fn drop(&mut self) {
         unsafe {
             self.state().lock.unlock_shared();
@@ -394,6 +409,7 @@ impl<T: ?Sized, RwLock: RawRwLock> Drop for CryoMutReadGuard<T, RwLock> {
 }
 
 impl<T: ?Sized, RwLock: RawRwLock> CryoMutWriteGuard<T, RwLock> {
+    #[inline]
     unsafe fn state(&self) -> &State<T, RwLock> {
         self.state.as_ref()
     }
@@ -402,12 +418,14 @@ impl<T: ?Sized, RwLock: RawRwLock> CryoMutWriteGuard<T, RwLock> {
 impl<T: ?Sized, RwLock: RawRwLock> Deref for CryoMutWriteGuard<T, RwLock> {
     type Target = T;
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         unsafe { self.state().data.as_ref() }
     }
 }
 
 impl<T: ?Sized, RwLock: RawRwLock> DerefMut for CryoMutWriteGuard<T, RwLock> {
+    #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { &mut *self.state().data.as_ptr() }
     }
@@ -424,6 +442,7 @@ impl<T: ?Sized + fmt::Debug, RwLock: RawRwLock> fmt::Debug for CryoMutWriteGuard
 }
 
 impl<T: ?Sized, RwLock: RawRwLock> Drop for CryoMutWriteGuard<T, RwLock> {
+    #[inline]
     fn drop(&mut self) {
         unsafe {
             self.state().lock.unlock_exclusive();
