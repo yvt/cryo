@@ -7,8 +7,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 //
-extern crate cryo;
-extern crate pin_utils;
+#![warn(rust_2018_idioms)]
+
 use cryo::*;
 use pin_utils::pin_mut;
 

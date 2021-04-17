@@ -7,7 +7,8 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 //
-extern crate cryo;
+#![warn(rust_2018_idioms)]
+
 use cryo::*;
 
 use std::{

@@ -35,7 +35,7 @@
 //!
 //! let cell: usize = 42;
 //!
-//! with_cryo(&cell, |cryo: Pin<&Cryo<usize, _>>| {
+//! with_cryo(&cell, |cryo: Pin<&Cryo<'_, usize, _>>| {
 //!     // Borrow `cryo` and move it into a `'static` closure.
 //!     let borrow: CryoRef<usize, _> = cryo.borrow();
 //!     spawn(move || { assert_eq!(*borrow, 42); });
@@ -55,7 +55,7 @@
 //! # use cryo::*;
 //! # use std::{thread::spawn, pin::Pin};
 //! # let mut cell: usize = 0;
-//! with_cryo_mut(&mut cell, |cryo_mut: Pin<&CryoMut<usize, _>>| {
+//! with_cryo_mut(&mut cell, |cryo_mut: Pin<&CryoMut<'_, usize, _>>| {
 //!     // Borrow `cryo_mut` and move it into a `'static` closure.
 //!     let mut borrow: CryoMutWriteGuard<usize, _> = cryo_mut.write();
 //!     spawn(move || { *borrow = 1; });
@@ -104,7 +104,10 @@
 //!
 //! From [cryopreservation](https://en.wikipedia.org/wiki/Cryopreservation).
 //!
+#![warn(rust_2018_idioms)]
 
+use pin_utils::pin_mut;
+use stable_deref_trait::{CloneStableDeref, StableDeref};
 use std::{
     fmt,
     marker::{PhantomData, PhantomPinned},
@@ -112,12 +115,6 @@ use std::{
     pin::Pin,
     ptr::NonNull,
 };
-
-extern crate pin_utils;
-use pin_utils::pin_mut;
-
-extern crate stable_deref_trait;
-use stable_deref_trait::{CloneStableDeref, StableDeref};
 
 mod raw_rwlock;
 pub use self::raw_rwlock::*;
@@ -134,7 +131,7 @@ pub use self::raw_rwlock::*;
 /// See the [module-level documentation] for more details.
 ///
 /// [module-level documentation]: index.html
-pub struct Cryo<'a, T: ?Sized + 'a, RwLock: RawRwLock> {
+pub struct Cryo<'a, T: ?Sized, RwLock: RawRwLock> {
     state: State<T, RwLock>,
     _phantom: (PhantomData<&'a T>, PhantomPinned),
 }
@@ -160,7 +157,7 @@ unsafe impl<'a, T: ?Sized + Send + Sync, RwLock: RawRwLock> Sync for Cryo<'a, T,
 /// See the [module-level documentation] for more details.
 ///
 /// [module-level documentation]: index.html
-pub struct CryoMut<'a, T: ?Sized + 'a, RwLock: RawRwLock> {
+pub struct CryoMut<'a, T: ?Sized, RwLock: RawRwLock> {
     state: State<T, RwLock>,
     _phantom: (PhantomData<&'a mut T>, PhantomPinned),
 }
@@ -240,7 +237,7 @@ impl<'a, T: ?Sized + 'a, RwLock: RawRwLock> Cryo<'a, T, RwLock> {
 }
 
 impl<'a, T: ?Sized + fmt::Debug, RwLock: RawRwLock> fmt::Debug for Cryo<'a, T, RwLock> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Cryo").field("data", &self.get()).finish()
     }
 }
@@ -331,7 +328,7 @@ impl<'a, T: ?Sized + 'a, RwLock: RawRwLock> CryoMut<'a, T, RwLock> {
 }
 
 impl<'a, T: ?Sized + fmt::Debug, RwLock: RawRwLock> fmt::Debug for CryoMut<'a, T, RwLock> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Safety: The constructed `CryoMutReadGuard` doesn't outlive `self`, so
         //         `CryoMutReadGuard::state` won't get dangling.
         let this = unsafe { Pin::new_unchecked(self) };
@@ -340,7 +337,7 @@ impl<'a, T: ?Sized + fmt::Debug, RwLock: RawRwLock> fmt::Debug for CryoMut<'a, T
         } else {
             struct LockedPlaceholder;
             impl fmt::Debug for LockedPlaceholder {
-                fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                     f.write_str("<locked>")
                 }
             }
@@ -391,7 +388,7 @@ impl<T: ?Sized, RwLock: RawRwLock> Clone for CryoMutReadGuard<T, RwLock> {
 }
 
 impl<T: ?Sized + fmt::Debug, RwLock: RawRwLock> fmt::Debug for CryoMutReadGuard<T, RwLock> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("CryoMutReadGuard")
             .field("data", &&**self)
             .finish()
@@ -434,7 +431,7 @@ impl<T: ?Sized, RwLock: RawRwLock> DerefMut for CryoMutWriteGuard<T, RwLock> {
 unsafe impl<T: ?Sized, RwLock: RawRwLock> StableDeref for CryoMutWriteGuard<T, RwLock> {}
 
 impl<T: ?Sized + fmt::Debug, RwLock: RawRwLock> fmt::Debug for CryoMutWriteGuard<T, RwLock> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("CryoMutWriteGuard")
             .field("data", &&**self)
             .finish()
@@ -452,14 +449,17 @@ impl<T: ?Sized, RwLock: RawRwLock> Drop for CryoMutWriteGuard<T, RwLock> {
 }
 
 /// Call a given function with a constructed [`Cryo`].
-pub fn with_cryo<T, R>(x: &T, f: impl FnOnce(Pin<&Cryo<T, StdRawRwLock>>) -> R) -> R {
+pub fn with_cryo<T, R>(x: &T, f: impl FnOnce(Pin<&Cryo<'_, T, StdRawRwLock>>) -> R) -> R {
     let c = Cryo::new(x);
     pin_mut!(c);
     f(c.as_ref())
 }
 
 /// Call a given function with a constructed [`CryoMut`].
-pub fn with_cryo_mut<T, R>(x: &mut T, f: impl FnOnce(Pin<&CryoMut<T, StdRawRwLock>>) -> R) -> R {
+pub fn with_cryo_mut<T, R>(
+    x: &mut T,
+    f: impl FnOnce(Pin<&CryoMut<'_, T, StdRawRwLock>>) -> R,
+) -> R {
     let c = CryoMut::new(x);
     pin_mut!(c);
     f(c.as_ref())
