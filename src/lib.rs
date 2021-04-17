@@ -153,8 +153,9 @@
 //!
 //!  - `lock_api` enables the blanket implementation of [`Lock`] on
 //!    all types implementing [`lock_api::RawRwLock`], such as
-//!    [`parking_lot::RawRwLock`].
+//!    [`spin::RawRwLock`] and [`parking_lot::RawRwLock`].
 //!
+//! [`spin::RawRwLock`]: https://docs.rs/spin/0.9.0/spin/type.RwLock.html
 //! [`parking_lot::RawRwLock`]: https://docs.rs/parking_lot/0.11.1/parking_lot/struct.RawRwLock.html
 //!
 //! ## Overhead
