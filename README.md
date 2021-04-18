@@ -8,14 +8,14 @@
 
 Requires Rust 1.34.0 or later.
 
-This crate provides a cell-like type [`Cryo`] that is similar to `RefCell`
+This crate provides a cell-like type `Cryo` that is similar to `RefCell`
 except that it constrains the lifetime of its borrowed value
 through a runtime check mechanism, erasing the compile-time lifetime
-information. The lock guard [`CryoRef`] created from `Cryo` is
+information. The lock guard `CryoRef` created from `Cryo` is
 `'static` and therefore can be used in various situations that require
 `'static` types, including:
 
- - Storing [`CryoRef`] temporarily in a `std::any::Any`-compatible container.
+ - Storing `CryoRef` temporarily in a `std::any::Any`-compatible container.
  - Capturing a reference to create a [Objective-C block](https://crates.io/crates/block).
 
 This works by, when a `Cryo` is dropped, not letting the current thread's
@@ -25,13 +25,13 @@ This is implemented by [readers-writer locks] under the hood.
 
 [readers-writer locks]: https://en.wikipedia.org/wiki/Readers–writer_lock
 
-<sub>¹ [`SyncLock`] blocks the current thread's execution on lock failure.
-[`LocalLock`], on the other hand, panics because it's designed for
+<sub>¹ `SyncLock` blocks the current thread's execution on lock failure.
+`LocalLock`, on the other hand, panics because it's designed for
 single-thread use cases and would deadlock otherwise.</sub>
 
 ## Examples
 
-[`cryo!`], [`Cryo`], and [`LocalLock`] (single-thread lock
+`cryo!`, `Cryo`, and `LocalLock` (single-thread lock
 implementation, used by default):
 
 ```rust
@@ -58,7 +58,7 @@ let cell: usize = 42;
 }
 ```
 
-[`cryo!`], [`Cryo`], and [`SyncLock`] (thread-safe lock implementation):
+`cryo!`, `Cryo`, and `SyncLock` (thread-safe lock implementation):
 
 ```rust
 use std::{thread::spawn, pin::Pin};
@@ -84,7 +84,7 @@ let cell: usize = 42;
 }
 ```
 
-[`cryo!`], [`CryoMut`], and [`SyncLock`]:
+`cryo!`, `CryoMut`, and `SyncLock`:
 
 ```rust
 {
@@ -137,21 +137,21 @@ let borrow = {
 
 ### Feature flags
 
- - `std` (enabled by default) enables [`SyncLock`].
+ - `std` (enabled by default) enables `SyncLock`.
 
- - `lock_api` enables the blanket implementation of [`Lock`] on
-   all types implementing [`lock_api::RawRwLock`], such as
-   [`spin::RawRwLock`] and [`parking_lot::RawRwLock`].
+ - `lock_api` enables the blanket implementation of `Lock` on
+   all types implementing `lock_api::RawRwLock`, such as
+   `spin::RawRwLock` and `parking_lot::RawRwLock`.
 
-[`spin::RawRwLock`]: https://docs.rs/spin/0.9.0/spin/type.RwLock.html
-[`parking_lot::RawRwLock`]: https://docs.rs/parking_lot/0.11.1/parking_lot/struct.RawRwLock.html
+`spin::RawRwLock`: https://docs.rs/spin/0.9.0/spin/type.RwLock.html
+`parking_lot::RawRwLock`: https://docs.rs/parking_lot/0.11.1/parking_lot/struct.RawRwLock.html
 
 ### Overhead
 
 `Cryo<T, SyncLock>`'s creation, destruction, borrowing, and unborrowing
 each take one or two atomic operations in the best cases.
 
-Neither of [`SyncLock`] and [`LocalLock`] require dynamic memory allocation.
+Neither of `SyncLock` and `LocalLock` require dynamic memory allocation.
 
 ### Nomenclature
 
