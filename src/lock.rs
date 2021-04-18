@@ -10,6 +10,7 @@
 use core::marker::PhantomData;
 
 #[cfg(feature = "std")]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 mod stdimp;
 #[cfg(feature = "std")]
 pub use self::stdimp::*;
@@ -90,6 +91,7 @@ pub unsafe trait Lock {
 }
 
 #[cfg(feature = "lock_api")]
+#[cfg_attr(docsrs, doc(cfg(feature = "lock_api")))]
 /// This crate's `LockTrait` is automatically implemented for types implementing
 /// [`lock_api::RawRwLock`]
 unsafe impl<T: lock_api::RawRwLock> Lock for T {

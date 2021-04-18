@@ -168,6 +168,7 @@
 //! From [cryopreservation](https://en.wikipedia.org/wiki/Cryopreservation).
 //!
 #![warn(rust_2018_idioms)]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![no_std]
 
 use core::{

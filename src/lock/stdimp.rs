@@ -13,6 +13,7 @@ use super::{Lock, NoSendMarker, SendMarker};
 /// The implementation of `SyncLock` was verified using [SPIN].
 ///
 /// [SPIN]: https://en.wikipedia.org/wiki/SPIN_model_checker
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 pub struct SyncLock {
     owner: thread::Thread,
     count: AtomicUsize,
