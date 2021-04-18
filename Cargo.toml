@@ -9,6 +9,7 @@ description = """
 Extend the lifetime of a reference. Safely.
 """
 keywords = ["lifetime", "ownership", "reference"]
+categories = ["rust-patterns", "no-std"]
 edition = "2018"
 
 exclude = [
