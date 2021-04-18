@@ -1,4 +1,5 @@
 use std::{
+    fmt,
     sync::atomic::{fence, AtomicUsize, Ordering},
     thread,
 };
@@ -19,6 +20,25 @@ pub struct SyncLock {
 
 const PARKED_FLAG: usize = !(usize::max_value() >> 1);
 const EXCLUSIVE_FLAG: usize = PARKED_FLAG >> 1;
+
+impl fmt::Debug for SyncLock {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let count = self.count.load(Ordering::Relaxed) & !PARKED_FLAG;
+        if (count & EXCLUSIVE_FLAG) != 0 {
+            write!(
+                f,
+                "SyncLock {{ creator: {:?}, <locked exclusively> }}",
+                self.owner
+            )
+        } else {
+            write!(
+                f,
+                "SyncLock {{ creator: {:?}, num_shared_locks: {} }}",
+                self.owner, count
+            )
+        }
+    }
+}
 
 unsafe impl Lock for SyncLock {
     // Only the creator thread can lock
