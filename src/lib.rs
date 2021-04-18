@@ -50,13 +50,14 @@
 //!     let closure: Box<dyn Fn()> =
 //!         Box::new(move || { assert_eq!(*borrow, 42); });
 //!     closure();
+//!     drop(closure);
 //!
 //!     // Compile-time lifetime works as well.
 //!     assert_eq!(*cryo.get(), 42);
 //!
 //!     // When `cryo` is dropped, it will block until there are no other
-//!     // references to `cryo`. In this case, the program will not leave
-//!     // this block until the thread we just spawned completes execution.
+//!     // references to `cryo`. In this case, the program will leave
+//!     // this block immediately because `CryoRef` has already been dropped.
 //! }
 //! ```
 //!
