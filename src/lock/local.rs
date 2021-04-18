@@ -3,7 +3,6 @@ use core::{cell::Cell, debug_assert_eq, fmt};
 use super::{Lock, NoSendMarker};
 
 /// A single-thread implementation of [`Lock`]. Panics on borrow failure.
-#[derive(Clone)]
 pub struct LocalLock {
     count: Cell<usize>,
 }
