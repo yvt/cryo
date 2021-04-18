@@ -11,6 +11,7 @@ pub struct LocalLock {
 const EXCLUSIVE: usize = usize::max_value();
 
 unsafe impl Lock for LocalLock {
+    #[inline]
     fn new() -> Self {
         Self {
             count: Cell::new(0),
