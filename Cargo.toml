@@ -11,6 +11,11 @@ Extend the lifetime of a reference. Safely.
 keywords = ["lifetime", "ownership", "reference"]
 edition = "2018"
 
+exclude = [
+    "/doc/*.pml",
+    "/README.tpl",
+]
+
 [badges]
 maintenance = { status = "passively-maintained" }
 
