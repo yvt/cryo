@@ -163,6 +163,8 @@
 //! `Cryo<T, SyncLock>`'s creation, destruction, borrowing, and unborrowing
 //! each take one or two atomic operations in the best cases.
 //!
+//! Neither of [`SyncLock`] and [`LocalLock`] require dynamic memory allocation.
+//!
 //! ## Nomenclature
 //!
 //! From [cryopreservation](https://en.wikipedia.org/wiki/Cryopreservation).
