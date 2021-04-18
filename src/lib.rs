@@ -139,7 +139,7 @@
 //!
 //! - While it's capable of extending the effective lifetime of a reference,
 //!   it does not apply to nested references. For example, when
-//!   `&'a NonStaticType<'b>` is supplied to the `Cryo`'s constructor, the
+//!   `&'a NonStaticType<'b>` is supplied to `Cryo`'s constructor, the
 //!   borrowed type is `CryoRef<NonStaticType<'b>>`, which is still partially
 //!   bound to the original lifetime.
 //!
