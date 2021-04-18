@@ -80,5 +80,5 @@ unsafe impl Lock for LocalLock {
 
 #[cold]
 fn borrow_fail() -> ! {
-    panic!("daedlock")
+    panic!("deadlock")
 }
