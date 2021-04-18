@@ -1,14 +1,24 @@
-use core::{cell::Cell, debug_assert_eq};
+use core::{cell::Cell, debug_assert_eq, fmt};
 
 use super::{Lock, NoSendMarker};
 
 /// A single-thread implementation of [`Lock`]. Panics on borrow failure.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct LocalLock {
     count: Cell<usize>,
 }
 
 const EXCLUSIVE: usize = usize::max_value();
+
+impl fmt::Debug for LocalLock {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.count.get() == EXCLUSIVE {
+            write!(f, "LocalLock {{ <locked exclusively> }}")
+        } else {
+            write!(f, "LocalLock {{ num_shared_locks: {} }}", self.count.get())
+        }
+    }
+}
 
 unsafe impl Lock for LocalLock {
     #[inline]
