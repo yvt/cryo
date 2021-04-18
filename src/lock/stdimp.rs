@@ -8,6 +8,10 @@ use super::{Lock, NoSendMarker, SendMarker};
 /// An implementation of [`Lock`] that uses the synchronization facility
 /// provided by [`::std`]. Lock operations are tied to the creator thread, but
 /// unlock operations can be done in any threads.
+///
+/// The implementation of `SyncLock` was verified using [SPIN].
+///
+/// [SPIN]: https://en.wikipedia.org/wiki/SPIN_model_checker
 pub struct SyncLock {
     owner: thread::Thread,
     count: AtomicUsize,
