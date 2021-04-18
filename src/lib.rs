@@ -7,8 +7,6 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 //
-//! *Extend the lifetime of a reference. Safely.*
-//!
 //! Requires Rust 1.34.0 or later.
 //!
 //! This crate provides a cell-like type [`Cryo`] that is similar to `RefCell`

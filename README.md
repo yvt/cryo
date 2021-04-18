@@ -1,8 +1,10 @@
-# cryo
+<h1 align="center">
+<img src="doc/banner.svg" alt="Cryo — Extend the lifetime of a reference. Safely.">
+</h1>
 
-[<img src="https://docs.rs/cryo/badge.svg" alt="docs.rs">](https://docs.rs/cryo/)
-
-*Extend the lifetime of a reference. Safely.*
+<p align="center">
+<a href="https://docs.rs/cryo/"><img src="https://docs.rs/cryo/badge.svg" alt="docs.rs"></a> <a href="https://crates.io/crates/cryo"><img src="https://img.shields.io/crates/v/cryo"></a> <img src="https://img.shields.io/badge/license-MIT%2FApache--2.0-blue">
+</p>
 
 Requires Rust 1.34.0 or later.
 
@@ -148,6 +150,8 @@ let borrow = {
 
 `Cryo<T, SyncLock>`'s creation, destruction, borrowing, and unborrowing
 each take one or two atomic operations in the best cases.
+
+Neither of [`SyncLock`] and [`LocalLock`] require dynamic memory allocation.
 
 ### Nomenclature
 
