@@ -15,6 +15,12 @@ mod stdimp;
 #[cfg(feature = "std")]
 pub use self::stdimp::*;
 
+#[cfg(feature = "atomic")]
+#[cfg_attr(docsrs, doc(cfg(feature = "atomic")))]
+mod panicking;
+#[cfg(feature = "atomic")]
+pub use self::panicking::*;
+
 mod local;
 pub use self::local::*;
 

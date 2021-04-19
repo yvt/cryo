@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+- Added `AtomicLock`
+
 ## [0.2.0] - 2021-04-18
 
 - Breaking: `Cryo` is now generalized over lock implementations. Two implementations are provided: `LocalLock` (single-threaded) and `SyncLock` (borrows can be sent to other threads). You need to specify in `cryo!` to use the latter.

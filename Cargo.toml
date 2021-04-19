@@ -21,8 +21,9 @@ exclude = [
 maintenance = { status = "passively-maintained" }
 
 [features]
-default = ["std"]
+default = ["atomic", "std"]
 std = []
+atomic = []
 
 [dependencies]
 lock_api = { version = "0.4.2", optional = true }
