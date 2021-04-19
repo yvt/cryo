@@ -8,7 +8,8 @@ use super::{Lock, NoSendMarker, SendMarker};
 
 /// An implementation of [`Lock`] that uses the synchronization facility
 /// provided by [`::std`]. Lock operations are tied to the creator thread, but
-/// unlock operations can be done in any threads.
+/// unlock operations can be done in any threads. Blocks the current thread on
+/// borrow failure.
 ///
 /// The implementation of `SyncLock` was verified using [SPIN].
 ///
