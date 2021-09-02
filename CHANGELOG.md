@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+- Breaking (**soundness fix**): `{Cryo, CryoMut}::new` is now `unsafe fn`.
+
 ## [0.2.2] - 2021-05-08
 
 - `cryo` no longer enables the default features of `stable_deref_trait`, fixing builds on `core`-only targets.

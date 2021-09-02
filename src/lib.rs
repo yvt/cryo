@@ -287,8 +287,43 @@ unsafe impl<T: ?Sized + Send, Lock: crate::Lock> Send for CryoMutWriteGuard<T, L
 
 impl<'a, T: ?Sized + 'a, Lock: crate::Lock> Cryo<'a, T, Lock> {
     /// Construct a new `Cryo`.
+    ///
+    /// # Safety
+    ///
+    /// The created `Cryo` should be dropped before `x` is invalidated. Pinning
+    /// is insufficient as demonstrated below:
+    ///
+    /// ```rust,should_panic
+    /// use cryo::{Cryo, LocalLock};
+    /// use std::{pin::Pin, cell::Cell};
+    ///
+    /// struct OnDrop<F: FnMut()>(u32, F);
+    /// impl<F: FnMut()> Drop for OnDrop<F> {
+    ///     fn drop(&mut self) { (self.1)(); }
+    /// }
+    ///
+    /// let the_box_dropped = Cell::new(false);
+    /// let the_box = Box::new(OnDrop(42, || the_box_dropped.set(true)));
+    ///
+    /// let cryo = Box::pin(unsafe { Cryo::<_, LocalLock>::new(&*the_box) });
+    /// let cryo_ref = Pin::as_ref(&cryo).borrow();
+    ///
+    /// std::mem::forget(cryo);
+    /// drop(the_box);
+    ///
+    /// // `cryo_ref` is still around, but the referenced `*the_box` is gone.
+    /// // Dereferencing `cryo_ref` at this point would cause an undefined
+    /// // behavior.
+    /// // (`*cryo`, referencing the non-existent `*the_box`, is still present
+    /// // in memory as per the pinning guarantee.)
+    /// assert!(!the_box_dropped.get());
+    /// dbg!(cryo_ref.0);
+    /// ```
+    ///
+    /// In version 0.2.2 and earlier, this method was not `unsafe fn` due to an
+    /// oversight.
     #[inline]
-    pub fn new(x: &'a T) -> Self {
+    pub unsafe fn new(x: &'a T) -> Self {
         Self {
             state: UnsafeCell::new(State {
                 data: NonNull::from(x),
@@ -335,8 +370,16 @@ impl<'a, T: ?Sized + 'a, Lock: crate::Lock> Drop for Cryo<'a, T, Lock> {
 
 impl<'a, T: ?Sized + 'a, Lock: crate::Lock> CryoMut<'a, T, Lock> {
     /// Construct a new `CryoMut`.
+    ///
+    /// # Safety
+    ///
+    /// The created `CryoMut` should be dropped before `x` is invalidated.
+    /// Pinning is insufficient as demonstrated in [`Cryo::new`]'s example.
+    ///
+    /// In version 0.2.2 and earlier, this method was not `unsafe fn` due to an
+    /// oversight.
     #[inline]
-    pub fn new(x: &'a mut T) -> Self {
+    pub unsafe fn new(x: &'a mut T) -> Self {
         Self {
             state: UnsafeCell::new(State {
                 data: NonNull::from(x),
@@ -574,7 +617,7 @@ macro_rules! cryo {
 
     // handle a single declaration
     ($(#[$attr:meta])* let $name:ident: $Cryo:ident< $t:ty $(, $Lock:ty)? > = $init:expr) => (
-        let cryo = $crate::$Cryo::<$t, $crate::__LockOrDefault!($(($Lock))?)>::new($init);
+        let cryo = unsafe { $crate::$Cryo::<$t, $crate::__LockOrDefault!($(($Lock))?)>::new($init) };
         $crate::pin_mut!(cryo);
         let $name = cryo.into_ref();
     );
