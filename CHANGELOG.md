@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [0.2.3] - 2021-09-02
 
 - Breaking (**soundness fix**): `{Cryo, CryoMut}::new` is now `unsafe fn`.
 
@@ -35,7 +36,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Initial release.
 
-[Unreleased]: https://github.com/yvt/cryo/compare/0.2.2...HEAD
+[Unreleased]: https://github.com/yvt/cryo/compare/0.2.3...HEAD
+[0.2.3]: https://github.com/yvt/cryo/compare/0.2.2...0.2.3
 [0.2.2]: https://github.com/yvt/cryo/compare/0.2.1...0.2.2
 [0.2.1]: https://github.com/yvt/cryo/compare/0.2.0...0.2.1
 [0.2.0]: https://github.com/yvt/cryo/compare/0.1.6...0.2.0
