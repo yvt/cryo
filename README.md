@@ -130,15 +130,15 @@ let borrow = with_cryo(&cell, |cryo| cryo.borrow());
 
  - `lock_api` enables the blanket implementation of `Lock` on
    all types implementing `lock_api::RawRwLock`, such as
-   `spin::RawRwLock` and `parking_lot::RawRwLock`.
+   [`spin::RawRwLock`][] and [`parking_lot::RawRwLock`][].
 
  - `atomic` (enabled by default) enables features that require full atomics,
    which is not supported by some targets (detecting such targets is still
-   unstable ([#32976])). This feature will be deprecated after the
+   unstable ([#32976][])). This feature will be deprecated after the
    stabilization of #32976.
 
-`spin::RawRwLock`: https://docs.rs/spin/0.9.0/spin/type.RwLock.html
-`parking_lot::RawRwLock`: https://docs.rs/parking_lot/0.11.1/parking_lot/struct.RawRwLock.html
+[`spin::RawRwLock`]: https://docs.rs/spin/0.9.0/spin/type.RwLock.html
+[`parking_lot::RawRwLock`]: https://docs.rs/parking_lot/0.11.1/parking_lot/struct.RawRwLock.html
 [#32976]: https://github.com/rust-lang/rust/issues/32976
 
 ### Overhead
