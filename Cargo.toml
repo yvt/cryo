@@ -30,6 +30,9 @@ lock_api = { version = "0.4.2", optional = true }
 stable_deref_trait = { version = "1.1.1", default-features = false }
 pin-utils = "0.1.0"
 
+[dev-dependencies]
+futures = "0.3.16"
+
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]

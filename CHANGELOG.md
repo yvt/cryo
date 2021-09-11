@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [Unreleased]
 
 - Bring `with_cryo` back with an overloaded interface (one function can produce both `Cryo` and `CryoMut` depending on a given type).
+- Deprecate (**soundness fix**): `cryo!`
 
 ## [0.2.3] - 2021-09-02
 
