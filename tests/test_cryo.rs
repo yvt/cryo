@@ -18,35 +18,39 @@ use std::{
 
 #[test]
 fn new() {
-    cryo!(let _unused: Cryo<_> = &42);
+    with_cryo(&42, |_| {});
 }
 
 #[test]
 fn borrow() {
-    cryo!(let cryo: Cryo<_> = &42);
-    assert_eq!(*cryo.borrow(), 42);
+    with_cryo(&42, |cryo| {
+        assert_eq!(*cryo.borrow(), 42);
+    });
 }
 
 #[test]
 fn borrow2() {
-    cryo!(let cryo: Cryo<_> = &42);
-    let b1 = cryo.borrow();
-    let _b2 = cryo.borrow();
-    assert_eq!(*b1, 42);
+    with_cryo(&42, |cryo| {
+        let b1 = cryo.borrow();
+        let _b2 = cryo.borrow();
+        assert_eq!(*b1, 42);
+    });
 }
 
 #[test]
 fn get() {
-    cryo!(let cryo: Cryo<_> = &42);
-    assert_eq!(*cryo.get(), 42);
+    with_cryo(&42, |cryo| {
+        assert_eq!(*cryo.get(), 42);
+    });
 }
 
 #[test]
 fn block_on_drop() {
-    cryo!(let cryo: Cryo<_, cryo::SyncLock> = &42);
-    let borrow = cryo.borrow();
-    spawn(move || {
-        sleep(Duration::from_millis(50));
-        drop(borrow);
+    with_cryo((&42, lock_ty::<SyncLock>()), |cryo| {
+        let borrow = cryo.borrow();
+        spawn(move || {
+            sleep(Duration::from_millis(50));
+            drop(borrow);
+        });
     });
 }

@@ -32,7 +32,7 @@
 //!
 //! # Examples
 //!
-//! [`cryo!`], [`Cryo`], and [`LocalLock`] (single-thread lock
+//! [`with_cryo`], [`Cryo`], and [`LocalLock`] (single-thread lock
 //! implementation, used by default):
 //!
 //! ```
@@ -41,10 +41,8 @@
 //!
 //! let cell: usize = 42;
 //!
-//! {
-//!     // `cryo!` uses `LocalLock` by default
-//!     cryo!(let cryo: Cryo<usize> = &cell);
-//!
+//! // `with_cryo` uses `LocalLock` by default
+//! with_cryo(&cell, |cryo: Pin<&Cryo<'_, usize, _>>| {
 //!     // Borrow `cryo` and move it into a `'static` closure.
 //!     let borrow: CryoRef<usize, _> = cryo.borrow();
 //!     let closure: Box<dyn Fn()> =
@@ -58,10 +56,10 @@
 //!     // When `cryo` is dropped, it will block until there are no other
 //!     // references to `cryo`. In this case, the program will leave
 //!     // this block immediately because `CryoRef` has already been dropped.
-//! }
+//! });
 //! ```
 //!
-//! [`cryo!`], [`Cryo`], and [`SyncLock`] (thread-safe lock implementation):
+//! [`with_cryo`], [`Cryo`], and [`SyncLock`] (thread-safe lock implementation):
 //!
 //! ```
 //! # use cryo::*;
@@ -69,10 +67,8 @@
 //!
 //! let cell: usize = 42;
 //!
-//! {
-//!     // This this we are specifying the lock implementation
-//!     cryo!(let cryo: Cryo<usize, SyncLock> = &cell);
-//!
+//! // This time we are specifying the lock implementation
+//! with_cryo((&cell, lock_ty::<SyncLock>()), |cryo| {
 //!     // Borrow `cryo` and move it into a `'static` closure.
 //!     // `CryoRef` can be sent to another thread because
 //!     // `SyncLock` is thread-safe.
@@ -85,18 +81,16 @@
 //!     // When `cryo` is dropped, it will block until there are no other
 //!     // references to `cryo`. In this case, the program will not leave
 //!     // this block until the thread we just spawned completes execution.
-//! }
+//! });
 //! ```
 //!
-//! [`cryo!`], [`CryoMut`], and [`SyncLock`]:
+//! [`with_cryo`], [`CryoMut`], and [`SyncLock`]:
 //!
 //! ```
 //! # use cryo::*;
 //! # use std::{thread::spawn, pin::Pin};
 //! # let mut cell: usize = 0;
-//! {
-//!     cryo!(let cryo_mut: CryoMut<usize, SyncLock> = &mut cell);
-//!
+//! with_cryo((&mut cell, lock_ty::<SyncLock>()), |cryo_mut| {
 //!     // Borrow `cryo_mut` and move it into a `'static` closure.
 //!     let mut borrow: CryoMutWriteGuard<usize, _> = cryo_mut.write();
 //!     spawn(move || { *borrow = 1; });
@@ -104,7 +98,7 @@
 //!     // When `cryo_mut` is dropped, it will block until there are no other
 //!     // references to `cryo_mut`. In this case, the program will not leave
 //!     // this block until the thread we just spawned completes execution
-//! }
+//! });
 //! assert_eq!(cell, 1);
 //! ```
 //!
@@ -117,10 +111,7 @@
 //! // `Cryo` while a `CryoRef` is still referencing it, and `Cryo`'s
 //! // destructor will wait for the `CryoRef` to be dropped first (which
 //! // will never happen)
-//! let borrow = {
-//!     cryo!(let cryo: Cryo<_, SyncLock> = &cell);
-//!     cryo.borrow()
-//! };
+//! let borrow = with_cryo((&cell, lock_ty::<SyncLock>()), |cryo| cryo.borrow());
 //! ```
 //!
 //! ```should_panic
@@ -130,10 +121,7 @@
 //! // `Cryo` while a `CryoRef` is still referencing it, and `Cryo`'s
 //! // destructor will panic, knowing no amount of waiting would cause
 //! // the `CryoRef` to be dropped
-//! let borrow = {
-//!     cryo!(let cryo: Cryo<_> = &cell);
-//!     cryo.borrow()
-//! };
+//! let borrow = with_cryo(&cell, |cryo| cryo.borrow());
 //! ```
 //!
 //! # Caveats
@@ -634,4 +622,96 @@ macro_rules! __LockOrDefault {
     () => {
         $crate::LocalLock
     };
+}
+
+/// The trait for types that can be wrapped with [`Cryo`] or [`CryoMut`].
+pub trait WithCryo: private::Sealed + Sized {
+    type Cryo;
+
+    /// Call a given function with a constructed [`Cryo`] or [`CryoMut`].
+    ///
+    /// This method is also exposed as a global function [`with_cryo`].
+    fn with_cryo<R>(self, f: impl FnOnce(Pin<&Self::Cryo>) -> R) -> R;
+}
+
+mod private {
+    pub trait Sealed {}
+    impl<T> Sealed for &T {}
+    impl<T> Sealed for &mut T {}
+    impl<T, Lock> Sealed for (&T, Lock) {}
+    impl<T, Lock> Sealed for (&mut T, Lock) {}
+}
+
+/// Constructs [`Cryo`] with [`LocalLock`] as its [`Lock`] type.
+impl<'a, T> WithCryo for &'a T {
+    type Cryo = Cryo<'a, T, LocalLock>;
+
+    #[inline]
+    fn with_cryo<R>(self, f: impl FnOnce(Pin<&Self::Cryo>) -> R) -> R {
+        let c = unsafe { Self::Cryo::new(self) };
+        pin_mut!(c);
+        f(c.as_ref())
+    }
+}
+
+/// Constructs [`CryoMut`] with [`LocalLock`] as its [`Lock`] type.
+impl<'a, T> WithCryo for &'a mut T {
+    type Cryo = CryoMut<'a, T, LocalLock>;
+
+    #[inline]
+    fn with_cryo<R>(self, f: impl FnOnce(Pin<&Self::Cryo>) -> R) -> R {
+        let c = unsafe { Self::Cryo::new(self) };
+        pin_mut!(c);
+        f(c.as_ref())
+    }
+}
+
+/// Constructs [`Cryo`] with a specified [`Lock`] type.
+impl<'a, T, Lock: crate::Lock> WithCryo for (&'a T, LockTyMarker<Lock>) {
+    type Cryo = Cryo<'a, T, Lock>;
+
+    #[inline]
+    fn with_cryo<R>(self, f: impl FnOnce(Pin<&Self::Cryo>) -> R) -> R {
+        let c = unsafe { Self::Cryo::new(self.0) };
+        pin_mut!(c);
+        f(c.as_ref())
+    }
+}
+
+/// Constructs [`CryoMut`] with a specified [`Lock`] type.
+impl<'a, T, Lock: crate::Lock> WithCryo for (&'a mut T, LockTyMarker<Lock>) {
+    type Cryo = CryoMut<'a, T, Lock>;
+
+    #[inline]
+    fn with_cryo<R>(self, f: impl FnOnce(Pin<&Self::Cryo>) -> R) -> R {
+        let c = unsafe { Self::Cryo::new(self.0) };
+        pin_mut!(c);
+        f(c.as_ref())
+    }
+}
+
+/// Marker type to specify the `Lock` type to use with [`with_cryo`].
+pub struct LockTyMarker<T: ?Sized>(PhantomData<T>);
+
+impl<T: ?Sized> Default for LockTyMarker<T> {
+    #[inline]
+    fn default() -> Self {
+        Self(PhantomData)
+    }
+}
+
+/// Construct a [`LockTyMarker`].
+#[inline]
+pub const fn lock_ty<T>() -> LockTyMarker<T> {
+    LockTyMarker(PhantomData)
+}
+
+/// Call a given function with a constructed [`Cryo`] or [`CryoMut`].
+///
+/// This function is a thin wrapper of [`WithCryo::with_cryo`].
+///
+/// See [the crate documentation](crate) for examples.
+#[inline]
+pub fn with_cryo<T: WithCryo, R>(x: T, f: impl FnOnce(Pin<&T::Cryo>) -> R) -> R {
+    x.with_cryo(f)
 }
