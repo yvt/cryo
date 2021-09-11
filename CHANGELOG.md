@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [0.2.4] - 2021-09-11
 
 - Bring `with_cryo` back with an overloaded interface (one function can produce both `Cryo` and `CryoMut` depending on a given type).
 - Deprecate (**soundness fix**): `cryo!`
@@ -40,7 +41,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Initial release.
 
-[Unreleased]: https://github.com/yvt/cryo/compare/0.2.3...HEAD
+[Unreleased]: https://github.com/yvt/cryo/compare/0.2.4...HEAD
+[0.2.4]: https://github.com/yvt/cryo/compare/0.2.3...0.2.4
 [0.2.3]: https://github.com/yvt/cryo/compare/0.2.2...0.2.3
 [0.2.2]: https://github.com/yvt/cryo/compare/0.2.1...0.2.2
 [0.2.1]: https://github.com/yvt/cryo/compare/0.2.0...0.2.1
