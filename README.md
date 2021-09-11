@@ -31,7 +31,7 @@ single-thread use cases and would deadlock otherwise.</sub>
 
 ## Examples
 
-`cryo!`, `Cryo`, and `LocalLock` (single-thread lock
+`with_cryo`, `Cryo`, and `LocalLock` (single-thread lock
 implementation, used by default):
 
 ```rust
@@ -39,10 +39,8 @@ use std::{thread::spawn, pin::Pin};
 
 let cell: usize = 42;
 
-{
-    // `cryo!` uses `LocalLock` by default
-    cryo!(let cryo: Cryo<usize> = &cell);
-
+// `with_cryo` uses `LocalLock` by default
+with_cryo(&cell, |cryo: Pin<&Cryo<'_, usize, _>>| {
     // Borrow `cryo` and move it into a `'static` closure.
     let borrow: CryoRef<usize, _> = cryo.borrow();
     let closure: Box<dyn Fn()> =
@@ -56,20 +54,18 @@ let cell: usize = 42;
     // When `cryo` is dropped, it will block until there are no other
     // references to `cryo`. In this case, the program will leave
     // this block immediately because `CryoRef` has already been dropped.
-}
+});
 ```
 
-`cryo!`, `Cryo`, and `SyncLock` (thread-safe lock implementation):
+`with_cryo`, `Cryo`, and `SyncLock` (thread-safe lock implementation):
 
 ```rust
 use std::{thread::spawn, pin::Pin};
 
 let cell: usize = 42;
 
-{
-    // This this we are specifying the lock implementation
-    cryo!(let cryo: Cryo<usize, SyncLock> = &cell);
-
+// This time we are specifying the lock implementation
+with_cryo((&cell, lock_ty::<SyncLock>()), |cryo| {
     // Borrow `cryo` and move it into a `'static` closure.
     // `CryoRef` can be sent to another thread because
     // `SyncLock` is thread-safe.
@@ -82,15 +78,13 @@ let cell: usize = 42;
     // When `cryo` is dropped, it will block until there are no other
     // references to `cryo`. In this case, the program will not leave
     // this block until the thread we just spawned completes execution.
-}
+});
 ```
 
-`cryo!`, `CryoMut`, and `SyncLock`:
+`with_cryo`, `CryoMut`, and `SyncLock`:
 
 ```rust
-{
-    cryo!(let cryo_mut: CryoMut<usize, SyncLock> = &mut cell);
-
+with_cryo((&mut cell, lock_ty::<SyncLock>()), |cryo_mut| {
     // Borrow `cryo_mut` and move it into a `'static` closure.
     let mut borrow: CryoMutWriteGuard<usize, _> = cryo_mut.write();
     spawn(move || { *borrow = 1; });
@@ -98,7 +92,7 @@ let cell: usize = 42;
     // When `cryo_mut` is dropped, it will block until there are no other
     // references to `cryo_mut`. In this case, the program will not leave
     // this block until the thread we just spawned completes execution
-}
+});
 assert_eq!(cell, 1);
 ```
 
@@ -109,10 +103,7 @@ assert_eq!(cell, 1);
 // `Cryo` while a `CryoRef` is still referencing it, and `Cryo`'s
 // destructor will wait for the `CryoRef` to be dropped first (which
 // will never happen)
-let borrow = {
-    cryo!(let cryo: Cryo<_, SyncLock> = &cell);
-    cryo.borrow()
-};
+let borrow = with_cryo((&cell, lock_ty::<SyncLock>()), |cryo| cryo.borrow());
 ```
 
 ```rust
@@ -120,10 +111,7 @@ let borrow = {
 // `Cryo` while a `CryoRef` is still referencing it, and `Cryo`'s
 // destructor will panic, knowing no amount of waiting would cause
 // the `CryoRef` to be dropped
-let borrow = {
-    cryo!(let cryo: Cryo<_> = &cell);
-    cryo.borrow()
-};
+let borrow = with_cryo(&cell, |cryo| cryo.borrow());
 ```
 
 ## Caveats
@@ -144,8 +132,14 @@ let borrow = {
    all types implementing `lock_api::RawRwLock`, such as
    `spin::RawRwLock` and `parking_lot::RawRwLock`.
 
+ - `atomic` (enabled by default) enables features that require full atomics,
+   which is not supported by some targets (detecting such targets is still
+   unstable ([#32976])). This feature will be deprecated after the
+   stabilization of #32976.
+
 `spin::RawRwLock`: https://docs.rs/spin/0.9.0/spin/type.RwLock.html
 `parking_lot::RawRwLock`: https://docs.rs/parking_lot/0.11.1/parking_lot/struct.RawRwLock.html
+[#32976]: https://github.com/rust-lang/rust/issues/32976
 
 ### Overhead
 
