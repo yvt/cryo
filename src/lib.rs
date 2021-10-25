@@ -107,6 +107,8 @@
 //!
 //! From [cryopreservation](https://en.wikipedia.org/wiki/Cryopreservation).
 //!
+#![deprecated = "this crate is unsound because of incorrect trait bounds \
+                 regarding thread safety. please migrate to cryo 0.3 or later"]
 
 use std::{
     fmt,
