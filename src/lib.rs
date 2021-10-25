@@ -204,11 +204,23 @@ pub struct Cryo<'a, T: ?Sized, Lock: crate::Lock> {
     _phantom: (PhantomData<&'a T>, PhantomPinned),
 }
 
-unsafe impl<'a, T: ?Sized + Send, Lock: crate::Lock> Send for Cryo<'a, T, Lock> where
+/// `Cryo` may be moved around multiple threads, and on each thread
+/// [`CryoRef`] may be created, forming multiple instances of `&T`.
+/// Therefore `CryoMut: Send` necessitates `T: Sync`.
+///
+/// Another interpretation is to think of `Cryo` as `&T` with an erased
+/// lifetime.
+///
+/// `T: Send` is not necessary because `Cryo` doesn't provide `&mut T`.
+unsafe impl<'a, T: ?Sized + Sync, Lock: crate::Lock> Send for Cryo<'a, T, Lock> where
     Lock::LockMarker: Send
 {
 }
-unsafe impl<'a, T: ?Sized + Send + Sync, Lock: crate::Lock> Sync for Cryo<'a, T, Lock> where
+
+/// `&T` can be created from `&Cryo`, so `Cryo: Sync` necessitates `T: Sync`.
+///
+/// `T: Send` is not necessary because `Cryo` doesn't provide `&mut T`.
+unsafe impl<'a, T: ?Sized + Sync, Lock: crate::Lock> Sync for Cryo<'a, T, Lock> where
     Lock::LockMarker: Send
 {
 }
@@ -231,10 +243,16 @@ pub struct CryoMut<'a, T: ?Sized, Lock: crate::Lock> {
     _phantom: (PhantomData<&'a mut T>, PhantomPinned),
 }
 
-unsafe impl<'a, T: ?Sized + Send, Lock: crate::Lock> Send for CryoMut<'a, T, Lock> where
+/// `CryoMut` may be moved around multiple threads, and on each thread
+/// [`CryoMutReadGuard`] may be created, forming multiple instances of `&T`.
+/// Therefore `CryoMut: Send` necessitates `T: Sync`.
+unsafe impl<'a, T: ?Sized + Send + Sync, Lock: crate::Lock> Send for CryoMut<'a, T, Lock> where
     Lock::LockMarker: Send
 {
 }
+
+/// `&mut T` may be created from `&CryoMut`, so sending `&CryoMut` to another
+/// thread requires `T: Send`.
 unsafe impl<'a, T: ?Sized + Send + Sync, Lock: crate::Lock> Sync for CryoMut<'a, T, Lock> where
     Lock::LockMarker: Send
 {
@@ -254,24 +272,30 @@ pub struct CryoMutReadGuard<T: ?Sized, Lock: crate::Lock> {
     state: NonNull<State<T, Lock>>,
 }
 
-unsafe impl<T: ?Sized + Send, Lock: crate::Lock> Send for CryoMutReadGuard<T, Lock> where
+/// `CryoMutReadGuard` is essentially `&T` with an indeterminate lifetime.
+/// The owning thread may be constrained by [`Lock::UnlockMarker`].
+unsafe impl<T: ?Sized + Sync, Lock: crate::Lock> Send for CryoMutReadGuard<T, Lock> where
     Lock::UnlockMarker: Send
 {
 }
-unsafe impl<T: ?Sized + Send + Sync, Lock: crate::Lock> Sync for CryoMutReadGuard<T, Lock> where
-    Lock::UnlockMarker: Send
-{
-}
+
+/// `CryoMutReadGuard` is essentially `&T` with an indeterminate lifetime.
+unsafe impl<T: ?Sized + Sync, Lock: crate::Lock> Sync for CryoMutReadGuard<T, Lock> {}
 
 /// The write lock guard type of [`CryoMut`].
 pub struct CryoMutWriteGuard<T: ?Sized, Lock: crate::Lock> {
     state: NonNull<State<T, Lock>>,
 }
 
+/// `CryoMutWriteGuard` is essentially `&mut T` with an indeterminate lifetime.
+/// The owning thread may be constrained by [`Lock::UnlockMarker`].
 unsafe impl<T: ?Sized + Send, Lock: crate::Lock> Send for CryoMutWriteGuard<T, Lock> where
     Lock::UnlockMarker: Send
 {
 }
+
+/// `CryoMutWriteGuard` is essentially `&mut T` with an indeterminate lifetime.
+unsafe impl<T: ?Sized + Sync, Lock: crate::Lock> Sync for CryoMutWriteGuard<T, Lock> {}
 
 impl<'a, T: ?Sized + 'a, Lock: crate::Lock> Cryo<'a, T, Lock> {
     /// Construct a new `Cryo`.

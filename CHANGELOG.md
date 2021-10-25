@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+- Breaking (**soundness fix**):
+    - `Cryo<T, _>: Send` requires `T: Sync` instead of `T: Send`.
+    - `CryoMut<T, _>: Send` now requires `T: Sync` in addition to `T: Send`.
+    - `CryoMutReadGuard<T, _>: Send` requires `T: Sync` instead of `T: Send`.
+- `Cryo<T, _>: Sync` no longer requires `T: Send`.
+- `CryoMutReadGuard<T, _>: Sync` no longer requires `T: Send`.
+- `CryoMutWriteGuard<T, _>: Sync` if `T: Sync`.
+
 ## [0.2.6] - 2021-09-11
 
 - Update `README.md`
