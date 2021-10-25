@@ -385,7 +385,7 @@ impl<'a, T: ?Sized + 'a, Lock: crate::Lock> Cryo<'a, T, Lock> {
     /// Borrow a cell using runtime lifetime rules.
     #[inline]
     pub fn borrow(self: Pin<&Self>) -> CryoRef<T, Lock> {
-        // Safety: `Cryo`'s `Send`-ness is constrained by that of `Lock::LockMarker`
+        // Safety: `&Cryo`'s `Send`-ness is constrained by that of `Lock::LockMarker`
         unsafe { (*self.state.get()).lock.lock_shared() };
         CryoRef {
             state: NonNull::new(self.state.get()).unwrap(),
@@ -410,7 +410,7 @@ impl<'a, T: ?Sized + fmt::Debug, Lock: crate::Lock> fmt::Debug for Cryo<'a, T, L
 impl<'a, T: ?Sized + 'a, Lock: crate::Lock> Drop for Cryo<'a, T, Lock> {
     #[inline]
     fn drop(&mut self) {
-        // Safety: `Cryo`'s `Send`-ness is constrained by that of `Lock::LockMarker`
+        // Safety: `&Cryo`'s `Send`-ness is constrained by that of `Lock::LockMarker`
         unsafe { (*self.state.get()).lock.lock_exclusive() };
         // A write lock ensures there are no other references to
         // the contents
@@ -442,7 +442,7 @@ impl<'a, T: ?Sized + 'a, Lock: crate::Lock> CryoMut<'a, T, Lock> {
     /// Acquire a read (shared) lock on a `CryoMut`.
     #[inline]
     pub fn read(self: Pin<&Self>) -> CryoMutReadGuard<T, Lock> {
-        // Safety: `CryoMut`'s `Send`-ness is constrained by that of `Lock::LockMarker`
+        // Safety: `&CryoMut`'s `Send`-ness is constrained by that of `Lock::LockMarker`
         unsafe { (*self.state.get()).lock.lock_shared() };
         CryoMutReadGuard {
             state: NonNull::new(self.state.get()).unwrap(),
@@ -452,7 +452,7 @@ impl<'a, T: ?Sized + 'a, Lock: crate::Lock> CryoMut<'a, T, Lock> {
     /// Attempt to acquire a read (shared) lock on a `CryoMut`.
     #[inline]
     pub fn try_read(self: Pin<&Self>) -> Option<CryoMutReadGuard<T, Lock>> {
-        // Safety: `CryoMut`'s `Send`-ness is constrained by that of `Lock::LockMarker`
+        // Safety: `&CryoMut`'s `Send`-ness is constrained by that of `Lock::LockMarker`
         if unsafe { (*self.state.get()).lock.try_lock_shared() } {
             Some(CryoMutReadGuard {
                 state: NonNull::new(self.state.get()).unwrap(),
@@ -465,7 +465,7 @@ impl<'a, T: ?Sized + 'a, Lock: crate::Lock> CryoMut<'a, T, Lock> {
     /// Acquire a write (exclusive) lock on a `CryoMut`.
     #[inline]
     pub fn write(self: Pin<&Self>) -> CryoMutWriteGuard<T, Lock> {
-        // Safety: `CryoMut`'s `Send`-ness is constrained by that of `Lock::LockMarker`
+        // Safety: `&CryoMut`'s `Send`-ness is constrained by that of `Lock::LockMarker`
         unsafe { (*self.state.get()).lock.lock_exclusive() };
         CryoMutWriteGuard {
             state: NonNull::new(self.state.get()).unwrap(),
@@ -475,7 +475,7 @@ impl<'a, T: ?Sized + 'a, Lock: crate::Lock> CryoMut<'a, T, Lock> {
     /// Attempt to acquire a write (exclusive) lock on a `CryoMut`.
     #[inline]
     pub fn try_write(self: Pin<&Self>) -> Option<CryoMutWriteGuard<T, Lock>> {
-        // Safety: `CryoMut`'s `Send`-ness is constrained by that of `Lock::LockMarker`
+        // Safety: `&CryoMut`'s `Send`-ness is constrained by that of `Lock::LockMarker`
         if unsafe { (*self.state.get()).lock.try_lock_exclusive() } {
             Some(CryoMutWriteGuard {
                 state: NonNull::new(self.state.get()).unwrap(),
@@ -525,7 +525,7 @@ impl<'a, T: ?Sized + fmt::Debug, Lock: crate::Lock> fmt::Debug for CryoMut<'a, T
 impl<'a, T: ?Sized + 'a, Lock: crate::Lock> Drop for CryoMut<'a, T, Lock> {
     #[inline]
     fn drop(&mut self) {
-        // Safety: `CryoMut`'s `Send`-ness is constrained by that of `Lock::LockMarker`
+        // Safety: `&CryoMut`'s `Send`-ness is constrained by that of `Lock::LockMarker`
         unsafe { (*self.state.get()).lock.lock_exclusive() };
         // A write lock ensures there are no other references to
         // the contents
