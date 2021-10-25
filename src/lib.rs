@@ -165,6 +165,8 @@
 #![warn(rust_2018_idioms)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![no_std]
+#![deprecated = "this crate is unsound because of incorrect trait bounds \
+                 regarding thread safety. please migrate to cryo 0.3"]
 
 use core::{
     cell::UnsafeCell,
