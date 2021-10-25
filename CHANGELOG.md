@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - `Cryo<T, _>: Sync` no longer requires `T: Send`.
 - `CryoMutReadGuard<T, _>: Sync` no longer requires `T: Send`.
 - `CryoMutWriteGuard<T, _>: Sync` if `T: Sync`.
+- Breaking (**soundness fix**): Remove `cryo!`
 
 ## [0.2.7] - 2021-10-25
 

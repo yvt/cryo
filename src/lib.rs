@@ -174,14 +174,11 @@ use core::{
     pin::Pin,
     ptr::NonNull,
 };
+use pin_utils::pin_mut;
 use stable_deref_trait::{CloneStableDeref, StableDeref};
 
 #[cfg(feature = "std")]
 extern crate std;
-
-// Used by `cryo!`
-#[doc(hidden)]
-pub use pin_utils::pin_mut;
 
 mod lock;
 pub use self::lock::*;
@@ -582,140 +579,6 @@ impl<T: ?Sized, Lock: crate::Lock> Drop for CryoMutWriteGuard<T, Lock> {
             // `self.state()` might be invalid beyond this point
         }
     }
-}
-
-/// Construct a [`Cryo`] or [`CryoMut`] and bind it to a local variable.
-///
-/// # Safety
-///
-/// **Don't use. This macro is unsound when used inside an `async fn`.** This
-/// macro doesn't require `unsafe { ... }` merely not to cause breakage.
-///
-/// The unsafety is demonstrated in the following code:
-///
-/// ```should_panic
-/// #![allow(deprecated)]
-/// use cryo::cryo;
-/// use std::{
-///     sync::atomic::{AtomicBool, Ordering},
-///     future::Future,
-///     task::Context,
-/// };
-///
-/// // For demonstration purposes, we want to stop execution when an undefined
-/// // behavior is about occur. To this end, we track the `UserType` object's
-/// // aliveness with this flag.
-/// static IS_USER_TYPE_ALIVE: AtomicBool = AtomicBool::new(true);
-///
-/// struct UserType(u32);
-///
-/// impl Drop for UserType {
-///     fn drop(&mut self) {
-///         IS_USER_TYPE_ALIVE.store(false, Ordering::Relaxed);
-///     }
-/// }
-///
-/// // Let there be a `UserType`.
-/// let user_type = UserType(42);
-///
-/// let mut borrow = None;
-///
-/// // Apply `cryo!` on it inside an `async` block.
-/// let mut fut = Box::pin(async {
-///     cryo!(let cryo: Cryo<_, cryo::SyncLock> = &user_type);
-///
-///     // Leak `borrow` to the outer environment
-///     borrow = Some(cryo.borrow());
-///
-///     // This `Future` will get stuck here. Furthermore, we `forget` this
-///     // `Future`, so `cryo`'s destructor will never run.
-///     std::future::pending::<()>().await
-/// });
-///
-/// // Run the `Future` until it stalls
-/// fut.as_mut().poll(&mut Context::from_waker(&futures::task::noop_waker()));
-///
-/// // Forget the `Future`. The compiler thinks `user_type` is not borrowed,
-/// // but in fact `cryo`, which is borrowing it, is still on memory.
-/// std::mem::forget(fut);
-///
-/// // And `user_type` is gone. Now `cryo` is dangling.
-/// drop(user_type);
-///
-/// // But we can still access the dead `user_type` through `borrow`!
-/// let borrow = borrow.unwrap();
-/// assert!(
-///     IS_USER_TYPE_ALIVE.load(Ordering::Relaxed),
-///     "`cryo!` is supposed to keep us safe, isn't it?"  // well, it betrayed us. (panics)
-/// );
-/// assert_eq!(borrow.0, 42);  // UB
-/// ```
-///
-/// # Examples
-///
-/// ```
-/// #![allow(deprecated)]
-/// use cryo::cryo;
-/// cryo!(let cryo: Cryo<u8> = &42);
-/// assert_eq!(*cryo.borrow(), 42);
-/// ```
-///
-/// ```
-/// #![allow(deprecated)]
-/// use cryo::cryo;
-/// let mut var = 42;
-/// {
-///     cryo!(let cryo: CryoMut<u8> = &mut var);
-///     *cryo.write() = 84;
-/// }
-/// assert_eq!(var, 84);
-/// ```
-///
-/// The lock implementation can be specified by an extra generic argument. It
-/// defaults to [`LocalLock`] when unspecified.
-///
-/// ```
-/// #![allow(deprecated)]
-/// use cryo::cryo;
-/// use std::thread::spawn;
-/// cryo!(let cryo: Cryo<_, cryo::SyncLock> = &42);
-/// let borrow = cryo.borrow();
-/// spawn(move || {
-///     assert_eq!(*borrow, 42);
-/// });
-/// ```
-#[deprecated = "`cryo!` is unsound when used inside `async fn` and will be \
-                removed in a future version"]
-#[macro_export]
-macro_rules! cryo {
-    // empty (base case for the recursion)
-    () => {};
-
-    // process multiple declarations
-    ($(#[$attr:meta])* let $name:ident: $Cryo:ident< $t:ty $(, $Lock:ty)? > = $init:expr; $($rest:tt)*) => (
-        $crate::cryo!($(#[$attr])* let $name: $Cryo<$t $(, $Lock)?> = $init);
-        $crate::cryo!($($rest)*);
-    );
-
-    // handle a single declaration
-    ($(#[$attr:meta])* let $name:ident: $Cryo:ident< $t:ty $(, $Lock:ty)? > = $init:expr) => (
-        let cryo = unsafe { $crate::$Cryo::<$t, $crate::__LockOrDefault!($(($Lock))?)>::new($init) };
-        $crate::pin_mut!(cryo);
-        let $name = cryo.into_ref();
-    );
-}
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! __LockOrDefault {
-    // Custom
-    (($t:ty)) => {
-        $t
-    };
-    // Default
-    () => {
-        $crate::LocalLock
-    };
 }
 
 /// The trait for types that can be wrapped with [`Cryo`] or [`CryoMut`].
