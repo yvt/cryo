@@ -36,9 +36,19 @@ pub unsafe trait Lock {
 
     /// The `Send`-ness of this type indicates whether a lock can only be
     /// acquired by the same thread as `self`'s creator.
+    ///
+    /// If `Self::LockMarker` is `Send`, `Self` should be `Send` (the `Cryo` can
+    /// be sent to another thread) and `Sync` (`Cryo::borrow` and
+    /// `CryoRef::drop` can happen unsynchronized, and `Cryo::borrow` can be
+    /// done in an non-owning thread), or else it won't have any effect.
     type LockMarker;
+
     /// The `Send`-ness of this type indicates whether a lock can only be
     /// released by the same thread as the one that acquired it.
+    ///
+    /// If `Self::UnlockMarker` is `Send`, `Self` should be `Sync` (meaning
+    /// `Cryo::borrow` and `CryoRef::drop` can happen unsynchronized), or else
+    /// it won't have any effect.
     type UnlockMarker;
 
     /// Acquire a shared lock, blocking the current thread until the lock
@@ -101,7 +111,7 @@ pub unsafe trait Lock {
 /// This crate's `LockTrait` is automatically implemented for types implementing
 /// [`lock_api::RawRwLock`]
 unsafe impl<T: lock_api::RawRwLock> Lock for T {
-    type LockMarker = PhantomData<Self>;
+    type LockMarker = ();
     type UnlockMarker = T::GuardMarker;
 
     #[inline]

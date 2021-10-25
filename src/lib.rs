@@ -209,16 +209,30 @@ pub struct Cryo<'a, T: ?Sized, Lock: crate::Lock> {
 /// lifetime.
 ///
 /// `T: Send` is not necessary because `Cryo` doesn't provide `&mut T`.
-unsafe impl<'a, T: ?Sized + Sync, Lock: crate::Lock> Send for Cryo<'a, T, Lock> where
-    Lock::LockMarker: Send
+///
+/// It owns `Lock`, hence the `Lock: Send` requirement. Furthermore,
+/// `Lock` can be shared with other threads through [`CryoMutReadGuard`], hence
+/// `Lock: Sync`.
+///
+/// `Lock::LockMarker: Send` is required because `Lock::lock_` may be called
+/// after `Cryo` is sent to another thread.
+unsafe impl<'a, T: ?Sized + Sync, Lock: crate::Lock> Send for Cryo<'a, T, Lock>
+where
+    Lock: Send + Sync,
+    Lock::LockMarker: Send,
 {
 }
 
 /// `&T` can be created from `&Cryo`, so `Cryo: Sync` necessitates `T: Sync`.
 ///
 /// `T: Send` is not necessary because `Cryo` doesn't provide `&mut T`.
-unsafe impl<'a, T: ?Sized + Sync, Lock: crate::Lock> Sync for Cryo<'a, T, Lock> where
-    Lock::LockMarker: Send
+///
+/// `Lock::LockMarker: Send` is required because `Lock::lock_` may be called
+/// through an `&Cryo` sent to another thread.
+unsafe impl<'a, T: ?Sized + Sync, Lock: crate::Lock> Sync for Cryo<'a, T, Lock>
+where
+    Lock: Sync,
+    Lock::LockMarker: Send,
 {
 }
 
@@ -243,15 +257,29 @@ pub struct CryoMut<'a, T: ?Sized, Lock: crate::Lock> {
 /// `CryoMut` may be moved around multiple threads, and on each thread
 /// [`CryoMutReadGuard`] may be created, forming multiple instances of `&T`.
 /// Therefore `CryoMut: Send` necessitates `T: Sync`.
-unsafe impl<'a, T: ?Sized + Send + Sync, Lock: crate::Lock> Send for CryoMut<'a, T, Lock> where
-    Lock::LockMarker: Send
+///
+/// It owns `Lock`, hence the `Lock: Send` requirement. Furthermore,
+/// `Lock` can be shared with other threads through [`CryoMutReadGuard`], hence
+/// `Lock: Sync`.
+///
+/// `Lock::LockMarker: Send` is required because `Lock::lock_` may be called
+/// after `Cryo` is sent to another thread.
+unsafe impl<'a, T: ?Sized + Send + Sync, Lock: crate::Lock> Send for CryoMut<'a, T, Lock>
+where
+    Lock: Send + Sync,
+    Lock::LockMarker: Send,
 {
 }
 
 /// `&mut T` may be created from `&CryoMut`, so sending `&CryoMut` to another
 /// thread requires `T: Send`.
-unsafe impl<'a, T: ?Sized + Send + Sync, Lock: crate::Lock> Sync for CryoMut<'a, T, Lock> where
-    Lock::LockMarker: Send
+///
+/// `Lock::LockMarker: Send` is required because `Lock::lock_` may be called
+/// through an `&Cryo` sent to another thread.
+unsafe impl<'a, T: ?Sized + Send + Sync, Lock: crate::Lock> Sync for CryoMut<'a, T, Lock>
+where
+    Lock: Sync,
+    Lock::LockMarker: Send,
 {
 }
 
@@ -271,12 +299,17 @@ pub struct CryoMutReadGuard<T: ?Sized, Lock: crate::Lock> {
 
 /// `CryoMutReadGuard` is essentially `&T` with an indeterminate lifetime.
 /// The owning thread may be constrained by [`Lock::UnlockMarker`].
-unsafe impl<T: ?Sized + Sync, Lock: crate::Lock> Send for CryoMutReadGuard<T, Lock> where
-    Lock::UnlockMarker: Send
+unsafe impl<T: ?Sized + Sync, Lock: crate::Lock> Send for CryoMutReadGuard<T, Lock>
+where
+    Lock: Sync,
+    Lock::UnlockMarker: Send,
 {
 }
 
 /// `CryoMutReadGuard` is essentially `&T` with an indeterminate lifetime.
+///
+/// `Lock` is never touched through `&CryoMutReadGuard<_, Lock>`, so the trait
+/// bounds is not constrained by `Lock`.
 unsafe impl<T: ?Sized + Sync, Lock: crate::Lock> Sync for CryoMutReadGuard<T, Lock> {}
 
 /// The write lock guard type of [`CryoMut`].
@@ -286,12 +319,17 @@ pub struct CryoMutWriteGuard<T: ?Sized, Lock: crate::Lock> {
 
 /// `CryoMutWriteGuard` is essentially `&mut T` with an indeterminate lifetime.
 /// The owning thread may be constrained by [`Lock::UnlockMarker`].
-unsafe impl<T: ?Sized + Send, Lock: crate::Lock> Send for CryoMutWriteGuard<T, Lock> where
-    Lock::UnlockMarker: Send
+unsafe impl<T: ?Sized + Send, Lock: crate::Lock> Send for CryoMutWriteGuard<T, Lock>
+where
+    Lock: Sync,
+    Lock::UnlockMarker: Send,
 {
 }
 
 /// `CryoMutWriteGuard` is essentially `&mut T` with an indeterminate lifetime.
+///
+/// `Lock` is never touched through `&CryoMutWriteGuard<_, Lock>`, so the trait
+/// bounds is not constrained by `Lock`.
 unsafe impl<T: ?Sized + Sync, Lock: crate::Lock> Sync for CryoMutWriteGuard<T, Lock> {}
 
 impl<'a, T: ?Sized + 'a, Lock: crate::Lock> Cryo<'a, T, Lock> {
