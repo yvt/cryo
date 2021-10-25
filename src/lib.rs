@@ -198,7 +198,7 @@ pub use self::lock::*;
 /// [module-level documentation]: index.html
 pub struct Cryo<'a, T: ?Sized, Lock: crate::Lock> {
     state: UnsafeCell<State<T, Lock>>,
-    _phantom: (PhantomData<&'a T>, PhantomPinned),
+    _phantom: PhantomData<&'a T>,
 }
 
 /// `Cryo` may be moved around multiple threads, and on each thread
@@ -286,6 +286,7 @@ where
 struct State<T: ?Sized, Lock> {
     data: NonNull<T>,
     lock: Lock,
+    _phantom: PhantomPinned,
 }
 
 /// The lock guard type of [`Cryo`]. This is currently a type alias but might
@@ -375,8 +376,9 @@ impl<'a, T: ?Sized + 'a, Lock: crate::Lock> Cryo<'a, T, Lock> {
             state: UnsafeCell::new(State {
                 data: NonNull::from(x),
                 lock: Lock::new(),
+                _phantom: PhantomPinned,
             }),
-            _phantom: (PhantomData, PhantomPinned),
+            _phantom: PhantomData,
         }
     }
 
@@ -431,6 +433,7 @@ impl<'a, T: ?Sized + 'a, Lock: crate::Lock> CryoMut<'a, T, Lock> {
             state: UnsafeCell::new(State {
                 data: NonNull::from(x),
                 lock: Lock::new(),
+                _phantom: PhantomPinned,
             }),
             _phantom: (PhantomData, PhantomPinned),
         }
