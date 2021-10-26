@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+- `with_cryo` can now take `&[mut] (impl ?Sized)` (a reference to a dynamically-sized object)
+
 ## [0.3.0] - 2021-10-25
 
 - Breaking (**soundness fix**):

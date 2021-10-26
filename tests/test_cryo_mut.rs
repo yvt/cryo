@@ -63,6 +63,15 @@ fn try_get_mut_fail() {
 }
 
 #[test]
+fn unsize() {
+    let mut s = "hello".to_owned();
+    with_cryo(&mut *s, |cryo| {
+        assert_eq!(*cryo.read(), *"hello");
+        assert_eq!(*cryo.write(), *"hello");
+    });
+}
+
+#[test]
 fn block_on_drop() {
     with_cryo((&mut 42, lock_ty::<SyncLock>()), |cryo_mut| {
         let borrow = cryo_mut.read();

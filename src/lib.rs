@@ -633,14 +633,14 @@ pub trait WithCryo: private::Sealed + Sized {
 
 mod private {
     pub trait Sealed {}
-    impl<T> Sealed for &T {}
-    impl<T> Sealed for &mut T {}
-    impl<T, Lock> Sealed for (&T, Lock) {}
-    impl<T, Lock> Sealed for (&mut T, Lock) {}
+    impl<T: ?Sized> Sealed for &T {}
+    impl<T: ?Sized> Sealed for &mut T {}
+    impl<T: ?Sized, Lock> Sealed for (&T, Lock) {}
+    impl<T: ?Sized, Lock> Sealed for (&mut T, Lock) {}
 }
 
 /// Constructs [`Cryo`] with [`LocalLock`] as its [`Lock`] type.
-impl<'a, T> WithCryo for &'a T {
+impl<'a, T: ?Sized> WithCryo for &'a T {
     type Cryo = Cryo<'a, T, LocalLock>;
 
     #[inline]
@@ -652,7 +652,7 @@ impl<'a, T> WithCryo for &'a T {
 }
 
 /// Constructs [`CryoMut`] with [`LocalLock`] as its [`Lock`] type.
-impl<'a, T> WithCryo for &'a mut T {
+impl<'a, T: ?Sized> WithCryo for &'a mut T {
     type Cryo = CryoMut<'a, T, LocalLock>;
 
     #[inline]
@@ -664,7 +664,7 @@ impl<'a, T> WithCryo for &'a mut T {
 }
 
 /// Constructs [`Cryo`] with a specified [`Lock`] type.
-impl<'a, T, Lock: crate::Lock> WithCryo for (&'a T, LockTyMarker<Lock>) {
+impl<'a, T: ?Sized, Lock: crate::Lock> WithCryo for (&'a T, LockTyMarker<Lock>) {
     type Cryo = Cryo<'a, T, Lock>;
 
     #[inline]
@@ -676,7 +676,7 @@ impl<'a, T, Lock: crate::Lock> WithCryo for (&'a T, LockTyMarker<Lock>) {
 }
 
 /// Constructs [`CryoMut`] with a specified [`Lock`] type.
-impl<'a, T, Lock: crate::Lock> WithCryo for (&'a mut T, LockTyMarker<Lock>) {
+impl<'a, T: ?Sized, Lock: crate::Lock> WithCryo for (&'a mut T, LockTyMarker<Lock>) {
     type Cryo = CryoMut<'a, T, Lock>;
 
     #[inline]

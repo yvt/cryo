@@ -38,6 +38,13 @@ fn borrow2() {
 }
 
 #[test]
+fn unsize() {
+    with_cryo("hello", |cryo| {
+        assert_eq!(*cryo.borrow(), *"hello");
+    });
+}
+
+#[test]
 fn get() {
     with_cryo(&42, |cryo| {
         assert_eq!(*cryo.get(), 42);
